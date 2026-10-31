@@ -65,6 +65,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 class NewRun(BaseModel):
     serial: str
     revision: str = "A"
+    photo_checks: bool = True
     bench: str = settings.bench_id
 
 
@@ -133,7 +134,7 @@ def start_run(body: NewRun) -> dict:
     run_id = str(uuid.uuid4())
     with connect() as db:
         db.execute("INSERT INTO runs (id, serial, revision) VALUES (%s, %s, %s)", (run_id, body.serial, body.revision))
-    control(RunControl(kind="start", bench=body.bench, run_id=run_id, serial=body.serial, revision=body.revision))
+    control(RunControl(kind="start", bench=body.bench, run_id=run_id, serial=body.serial, revision=body.revision, photo_checks=body.photo_checks))
     return {"run_id": run_id}
 
 

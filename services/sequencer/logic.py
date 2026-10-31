@@ -10,6 +10,7 @@ class Run:
     run_id: str
     serial: str = ""
     revision: str = "A"
+    photo_checks: bool = True
     done: list[str] = field(default_factory=list)
     waived: list[str] = field(default_factory=list)
     active: str | None = None

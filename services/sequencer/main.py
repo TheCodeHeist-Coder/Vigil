@@ -74,7 +74,7 @@ class Sequencer:
     def on_control(self, control: RunControl) -> None:
         bench = self.bench(control.bench)
         if control.kind == "start":
-            bench.run = logic.Run(control.run_id, control.serial or "", control.revision)
+            bench.run = logic.Run(control.run_id, control.serial or "", control.revision, control.photo_checks)
             bench.tracker = ZoneTracker(bench.zones)
             self.publish_state(bench)
         elif control.kind == "stop":
@@ -90,6 +90,8 @@ class Sequencer:
         if not bench.run or bench.run.run_id != verdict.run_id:
             return
         for output in logic.on_verdict(bench.run, bench.procedure, verdict):
+            if not bench.run.photo_checks:
+                continue
             offset = bench.history[-1][1] if bench.history else 0
             event = BenchEvent(
                 id=str(uuid.uuid4()),
@@ -173,7 +175,7 @@ class Sequencer:
                         times=event.times,
                     )
                     publish(self.kafka, ALERTS_REFLEX, alert, bench.id)
-                else:
+                elif run.photo_checks:
                     self.flag(bench, event, "step_check", output.step_id, None, [track.frame_offset])
             self.publish_state(bench)
 

@@ -1,6 +1,6 @@
 # web
 
-The four screens, in React and Vite. Run with `pnpm install` then `pnpm dev`, and open `https://<laptop-ip>:5173`.
+The four screens, in React and Vite. Run with `pnpm install` then `pnpm dev`, and open <http://localhost:5173>.
 
 | Page | Path | Use |
 | --- | --- | --- |
@@ -9,4 +9,4 @@ The four screens, in React and Vite. Run with `pnpm install` then `pnpm dev`, an
 | Phone | `#/phone` | Voice and vibration for the operator. Use Chrome on Android, and tap to arm. |
 | Supervisor | `#/supervisor` | Results, incidents, manual search, and manual edits with approval |
 
-The dev server uses a self-signed certificate because a phone's camera needs HTTPS. Accept the browser warning once.
+On this laptop, plain `http://localhost:5173` is enough, because browsers allow the camera on localhost. A phone reaches the laptop by IP address, which needs HTTPS, so `dev.sh` also serves `https://<laptop-ip>:5174`. Accept the certificate warning once on the phone.

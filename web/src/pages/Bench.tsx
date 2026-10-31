@@ -43,9 +43,9 @@ export function Bench({ status }: { status: Status | null }) {
     void get<Zone[]>("/api/zones").then(setZones);
   }, []);
 
-  async function start(serial: string, revision: "A" | "B") {
+  async function start(serial: string, revision: "A" | "B", photoChecks: boolean) {
     unlockSound();
-    await post("/api/runs", { serial, revision });
+    await post("/api/runs", { serial, revision, photo_checks: photoChecks });
     void get<Procedure>("/api/procedure").then(setProcedure);
   }
 

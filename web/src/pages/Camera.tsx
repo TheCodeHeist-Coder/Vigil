@@ -64,7 +64,7 @@ export function Camera(_: { status: Status | null }) {
 
   async function start() {
     if (!navigator.mediaDevices) {
-      setLink({ tone: "bad", label: "Secure link needed", detail: "Open this page with https:// and accept the certificate warning." });
+      setLink({ tone: "bad", label: "Secure link needed", detail: "On this laptop use http://localhost:5173. On a phone use the https address on port 5174." });
       return;
     }
     setLink({ tone: "busy", label: "Connecting" });

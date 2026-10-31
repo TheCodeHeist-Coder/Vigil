@@ -109,6 +109,13 @@ def test_new_error_can_flag_once_the_verdict_is_in():
     assert outputs[0].expected == "S2" and outputs[0].actual == "S3"
 
 
+def test_hand_test_run_still_finishes_every_step():
+    run = logic.Run("r", photo_checks=False)
+    for zone in "ABCDE":
+        do_step(run, zone)
+    assert logic.finished(run, PROCEDURE)
+
+
 def test_inside_polygon():
     tray = next(z for z in ZONES if z.kind == "tray")
     assert inside(TRAY, tray.polygon)

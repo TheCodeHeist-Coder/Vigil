@@ -58,12 +58,14 @@ uv run python -m services.knowledge.main manual/vg100.md
 ./dev.sh                                   # stop with ./dev.sh stop
 ```
 
-Open <https://localhost:5173> and accept the certificate warning, then:
+Open <http://localhost:5173> on this laptop. A phone uses `https://<laptop-ip>:5174`, and needs its certificate warning accepted once. Then:
 
 1. On **Camera**, start the camera on a device that can see the bench.
 2. On **Bench**, choose **Mark zones** and drag a box around each bin.
 3. On a second Android phone, open **Phone** and turn on alerts.
 4. On **Bench**, enter the serial, choose the revision, and press **Start assembly**.
+
+To test with only a laptop camera, sit back so your head, shoulders and arms are in view, mark the zones as spots your hand can reach, and tick **Hand test**. That skips photo checks, which need a camera that can see the unit.
 
 ## Keys
 

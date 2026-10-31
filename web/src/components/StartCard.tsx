@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Icon } from "./Icon";
 
-type Props = { cameraLive: boolean; onSetup: () => void; onStart: (serial: string, revision: "A" | "B") => void; suggested: string; returning: boolean };
+type Props = { cameraLive: boolean; onSetup: () => void; onStart: (serial: string, revision: "A" | "B", photoChecks: boolean) => void; suggested: string; returning: boolean };
 
 const REVISIONS = [
   { id: "A", name: "Rev A", note: "Gasket fitted by hand" },
@@ -20,6 +20,7 @@ export function StartCard({ cameraLive, onSetup, onStart, suggested, returning }
   const zonesDone = zonesMarked();
   const [serial, setSerial] = useState(suggested);
   const [revision, setRevision] = useState<"A" | "B">("A");
+  const [handTest, setHandTest] = useState(false);
 
   return (
     <section className="card start">
@@ -78,7 +79,14 @@ export function StartCard({ cameraLive, onSetup, onStart, suggested, returning }
           </label>
         ))}
       </fieldset>
-      <button className="primary" disabled={!serial.trim()} onClick={() => onStart(serial.trim(), revision)}>
+      <label className="toggle">
+        <input type="checkbox" checked={handTest} onChange={(e) => setHandTest(e.target.checked)} />
+        <span>
+          <b>Hand test</b>
+          <small>Skip photo checks, for when the camera cannot see a real unit</small>
+        </span>
+      </label>
+      <button className="primary" disabled={!serial.trim()} onClick={() => onStart(serial.trim(), revision, !handTest)}>
         Start assembly
       </button>
       {!cameraLive && <p className="muted note">Vigil cannot see the bench until the camera is connected.</p>}

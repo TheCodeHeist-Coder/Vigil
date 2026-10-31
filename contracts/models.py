@@ -122,6 +122,7 @@ class RunControl(BaseModel):
     run_id: str | None = None
     serial: str | None = None
     revision: Literal["A", "B"] = "A"
+    photo_checks: bool = True  # off for a hand test, when the camera cannot see the unit
     zones: list[Zone] | None = None
     procedure: Procedure | None = None
 

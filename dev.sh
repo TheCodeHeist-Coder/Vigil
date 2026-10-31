@@ -6,7 +6,7 @@ mkdir -p logs
 SERVICES="ingest edge sequencer reasoner gateway"
 
 stop_all() {
-  for name in $SERVICES web; do
+  for name in $SERVICES web web-https; do
     if [ -f "logs/$name.pid" ]; then
       kill "$(cat "logs/$name.pid")" 2>/dev/null
       rm -f "logs/$name.pid"
@@ -16,6 +16,8 @@ stop_all() {
   pkill -f '^\.venv/bin/python -m services\.' 2>/dev/null
   sleep 2
   pkill -9 -f '^\.venv/bin/python -m services\.' 2>/dev/null
+  # Vite restarts itself when its config changes, so free the ports directly.
+  fuser -k 5173/tcp 5174/tcp >/dev/null 2>&1
   echo "stopped"
 }
 
@@ -40,12 +42,19 @@ done
 
 (
   cd web
-  nohup pnpm dev >../logs/web.log 2>&1 </dev/null &
+  nohup pnpm exec vite >../logs/web.log 2>&1 </dev/null &
   echo $! >../logs/web.pid
+  VIGIL_HTTPS=1 nohup pnpm exec vite >../logs/web-https.log 2>&1 </dev/null &
+  echo $! >../logs/web-https.pid
 )
 echo "started web"
 echo
-echo "Bench       https://localhost:5173/#/"
-echo "Camera      https://localhost:5173/#/camera"
-echo "Phone       https://<this-laptop-ip>:5173/#/phone"
-echo "Supervisor  https://localhost:5173/#/supervisor"
+echo "On this laptop"
+echo "  Bench       http://localhost:5173/#/"
+echo "  Camera      http://localhost:5173/#/camera"
+echo "  Supervisor  http://localhost:5173/#/supervisor"
+echo
+echo "On a phone, on the same network, accepting the certificate warning"
+LAN=$(hostname -I 2>/dev/null | cut -d' ' -f1)
+echo "  Phone       https://$LAN:5174/#/phone"
+echo "  Camera      https://$LAN:5174/#/camera"

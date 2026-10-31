@@ -91,10 +91,9 @@ export function AppBar({ page, status }: { page: Route; status: Status | null })
     <>
       <header className="appbar">
         <a className="brand" href="#/" aria-label="Vigil, go to Bench">
-          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="9" fill="var(--primary)" />
-            <path d="M6 16s3.8-6.5 10-6.5S26 16 26 16s-3.8 6.5-10 6.5S6 16 6 16Z" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinejoin="round" />
-            <circle cx="16" cy="16" r="3.2" fill="#fff" />
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round" aria-hidden="true">
+            <path d="M16 3.5 26.8 9.75v12.5L16 28.5 5.2 22.25V9.75Z" />
+            <circle cx="16" cy="16" r="5" />
           </svg>
           <span>Vigil</span>
         </a>

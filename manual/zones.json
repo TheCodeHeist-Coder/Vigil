@@ -1,7 +1,7 @@
 [
   {
     "id": "A",
-    "label": "Bin A",
+    "label": "Bin A · Gasket",
     "kind": "bin",
     "polygon": [
       [
@@ -24,7 +24,7 @@
   },
   {
     "id": "B",
-    "label": "Bin B",
+    "label": "Bin B · Module",
     "kind": "bin",
     "polygon": [
       [
@@ -47,7 +47,7 @@
   },
   {
     "id": "C",
-    "label": "Bin C",
+    "label": "Bin C · Cable",
     "kind": "bin",
     "polygon": [
       [
@@ -70,7 +70,7 @@
   },
   {
     "id": "D",
-    "label": "Bin D",
+    "label": "Bin D · Cover",
     "kind": "bin",
     "polygon": [
       [
@@ -93,7 +93,7 @@
   },
   {
     "id": "E",
-    "label": "Bin E",
+    "label": "Bin E · Clips",
     "kind": "bin",
     "polygon": [
       [

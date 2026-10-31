@@ -34,7 +34,8 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
     c.scale(ratio, ratio);
     const X = (p: Point): Point => [p[0] * box.width, p[1] * box.height];
 
-    for (const zone of zones) {
+    // Boxes mean nothing without the bench behind them.
+    for (const zone of cameraLive ? zones : []) {
       const on = zone.id === targetBin || zone.id === current?.id;
       const [x, y] = X(zone.polygon[0]);
       c.beginPath();
@@ -49,14 +50,16 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
         c.fillStyle = "rgba(34,197,139,.18)";
         c.fill();
       }
-      c.font = `600 ${box.width < 500 ? 10.5 : 13}px 'Inter Variable', system-ui`;
-      const width = c.measureText(zone.label).width + 14;
+      const small = box.width < 620;
+      const label = small ? zone.label.split(" · ")[0] : zone.label;
+      c.font = `600 ${small ? 10.5 : 13}px 'Inter Variable', system-ui`;
+      const width = c.measureText(label).width + 14;
       c.fillStyle = on ? TARGET : "rgba(16,24,40,.72)";
       c.beginPath();
       c.roundRect(x + 6, y + 6, width, 22, 6);
       c.fill();
       c.fillStyle = on ? "#06281c" : "#fff";
-      c.fillText(zone.label, x + 13, y + 22);
+      c.fillText(label, x + 13, y + 22);
     }
 
     for (const point of track?.hands ?? []) {
@@ -76,7 +79,7 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
       c.fillRect(x1, y1, x2 - x1, y2 - y1);
       c.strokeRect(x1, y1, x2 - x1, y2 - y1);
     }
-  }, [zones, track, targetBin, drag, current]);
+  }, [zones, track, targetBin, drag, current, cameraLive]);
 
   useEffect(() => setIndex(0), [setup]);
 

@@ -43,9 +43,9 @@ export function StartCard({ cameraLive, onSetup, onStart, suggested, returning }
           <span className="tick">{zonesDone && <Icon name="check" size={14} />}</span>
           <div>
             <b>Bench zones</b>
-            <small>{zonesDone ? "Marked on the video" : "Mark each bin on the video"}</small>
+            <small>{zonesDone ? "Marked on the video" : cameraLive ? "Mark each bin on the video" : "Connect the camera first"}</small>
           </div>
-          <button className="link" onClick={onSetup}>
+          <button className="link" disabled={!cameraLive} onClick={onSetup}>
             {zonesDone ? "Change" : "Mark zones"}
           </button>
         </li>

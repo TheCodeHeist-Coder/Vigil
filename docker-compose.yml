@@ -1,0 +1,43 @@
+services:
+  kafka:
+    image: apache/kafka:4.4.0
+    container_name: vigil-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://localhost:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${LAN_IP:-localhost}:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_MESSAGE_MAX_BYTES: 2097152
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: "-Xmx768m -Xms256m"
+    restart: unless-stopped
+
+  # Only needed on a machine with no YugabyteDB running. Start with: docker compose --profile db up -d
+  yugabyte:
+    profiles: ["db"]
+    image: yugabytedb/yugabyte:2026.1.2.0-b137
+    container_name: vigil-yugabyte
+    hostname: vigil-yugabyte
+    user: root
+    command:
+      - bin/yugabyted
+      - start
+      - --background=false
+      - --base_dir=/home/yugabyte/var
+    ports:
+      - "127.0.0.1:5433:5433"
+    volumes:
+      - yugabyte-data:/home/yugabyte/var
+    restart: unless-stopped
+
+volumes:
+  yugabyte-data:

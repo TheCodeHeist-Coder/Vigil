@@ -34,6 +34,16 @@ def test_section_spanning_pages_keeps_its_own_page():
     assert wiring.page == 5
 
 
+def test_pdf_gives_the_same_structure_as_markdown():
+    from_pdf = hierarchy(read_pages(ROOT / "manual" / "vg100.pdf"))
+    from_markdown = hierarchy(read_pages(MANUAL))
+    assert len(read_pages(ROOT / "manual" / "vg100.pdf")) == 10
+    assert [s.section for s in from_pdf] == [s.section for s in from_markdown]
+    pdf_step = next(leaf for s in from_pdf for leaf in s.leaves if leaf.section == "4.1")
+    assert pdf_step.page == 6
+    assert "skip step 4.1" in " ".join(pdf_step.body.split())
+
+
 def test_unmarked_text_is_one_page():
     assert split_markdown("## 1 Scope\n### 1.1 Purpose\nText") == [(1, "## 1 Scope\n### 1.1 Purpose\nText")]
 

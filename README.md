@@ -2,21 +2,103 @@
 
 Vigil watches an assembly bench and stops a wrong step as it happens. A local rule raises the alert straight away, then Gemini confirms or clears it with a citation from the manual.
 
-Built for hackCBS 9.0. The demo uses a mock product and a 10 to 12 page manual, not a real factory.
+Built for hackCBS 9.0. The demo uses a mock product and a 10 page manual, not a real factory.
+
+## How it works
+
+```text
+Camera --WebRTC--> ingest --> Kafka frames.raw --> edge (YOLOv8-Pose + MediaPipe)
+                                                     |
+                                                     v  hand.tracks
+                                                  sequencer (zones + step rules)
+                                                     |
+                           +-------------------------+----------------+
+                           v                                          v
+                     alerts.reflex                                  flags
+                           |                                          |
+                           v                                          v
+Screens and phone <---- gateway <-------- verdicts, incidents ---- reasoner <--> Gemini
+                                                                      |
+                                                       YugabyteDB (manual vectors, runs)
+                                                       Meko (agent memory and traces)
+```
+
+The sequencer raises the alert with no network call, so a slow or failed cloud call can never delay it. Gemini then checks the event against the manual. Every quote is checked against the manual text, and a verdict that fails this check stays on hold for a supervisor.
 
 ## Services
 
-Each service lives in its own folder under `services/` and talks to the others only through Kafka topics, so any one of them can be read, replaced or scaled alone.
+Each service has its own folder and README, and talks to the others only through Kafka. Any one of them can be read, replaced or scaled alone.
 
 | Service | Job |
 | --- | --- |
-| `services/ingest` | Takes WebRTC camera video and writes JPEG frames to Kafka |
-| `services/edge` | Finds hands with YOLOv8-Pose and MediaPipe |
-| `services/sequencer` | Turns hand positions into events and checks them against the procedure |
-| `services/reasoner` | Checks flagged events with Gemini and the manual, and runs the incident agent |
-| `services/knowledge` | Loads the manual into YugabyteDB as hierarchical embeddings |
-| `services/gateway` | Serves the screens over WebSockets and HTTP |
+| [`services/ingest`](services/ingest) | Takes WebRTC camera video and writes JPEG frames to Kafka |
+| [`services/edge`](services/edge) | Finds hands with YOLOv8-Pose and MediaPipe |
+| [`services/sequencer`](services/sequencer) | Turns hand positions into events and checks them against the procedure |
+| [`services/reasoner`](services/reasoner) | Checks flagged events with Gemini and runs the incident agent |
+| [`services/knowledge`](services/knowledge) | Loads the manual into YugabyteDB as hierarchical embeddings |
+| [`services/gateway`](services/gateway) | Serves the screens over WebSockets and HTTP |
+| [`web`](web) | Operator, camera, phone and supervisor screens |
 
-`contracts/` holds the shared message types and topic names. `common/` holds shared helpers. `web/` holds the screens.
+`contracts/` holds the shared message types and topic names. `common/` holds shared helpers. `tools/` holds run-once scripts.
 
-See `PLAN.md` for the build plan.
+## Run it
+
+You need Docker, [uv](https://docs.astral.sh/uv/) and pnpm.
+
+```bash
+uv sync
+(cd web && pnpm install)
+cp .env.example .env                       # add your keys
+docker compose --profile db up -d          # Kafka and YugabyteDB
+docker exec -i vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -c "CREATE DATABASE vigil;"'
+docker exec -i vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -d vigil' < db/schema.sql
+uv run python -m tools.fetch_models        # about 15 MB
+uv run python -m tools.topics
+uv run python -m services.knowledge.main manual/vg100.md
+./dev.sh                                   # stop with ./dev.sh stop
+```
+
+Open <https://localhost:5173> and accept the certificate warning, then:
+
+1. On **Camera**, start streaming from a device that can see the bench.
+2. On **Operator**, draw each zone over the video using the zone buttons.
+3. On a second Android phone, open **Phone** and tap to arm it.
+4. On **Operator**, set the serial and revision, then press **Start run**.
+
+## Keys
+
+| Key | Used for | With no key |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | Verdicts, photo checks, embeddings, the incident agent | Sequence errors use local rules from the manual. Photo checks return `uncertain`. Manual search matches words, not meaning. |
+| `MEKO_API_KEY` | Agent memory, conversations and decision traces | Memory stays in YugabyteDB |
+
+The model in use always shows on screen, so `local-rules` is never mistaken for Gemini.
+
+After adding `GEMINI_API_KEY`, run these once:
+
+```bash
+uv run python -m tools.gemini_latency               # prints which model to use
+uv run python -m tools.render_voice                 # optional voice clips
+uv run python -m services.knowledge.main manual/vg100.md   # real embeddings
+```
+
+## Test without a bench
+
+```bash
+uv run python -m tools.simulate_run clean           # also: e1, e2
+uv run python -m tools.simulate_run e3 --revision B
+uv run python -m tools.replay_clip clips/run.mp4    # feed a recorded clip through Kafka
+uv run pytest -m "not integration"                  # unit tests
+uv run pytest                                       # needs Kafka and YugabyteDB
+```
+
+## Stage fallbacks
+
+If the camera link fails, `replay_clip` feeds a recorded run through Kafka. If Gemini or the internet fails, set `REPLAY=1` to serve verdicts saved from earlier real runs. These show a REPLAY badge and never count towards `/api/results`.
+
+## Limits
+
+- The unit and manual are mock. Results come from one bench, and no field accuracy exists.
+- YOLOv8-Pose needs to see the operator's body, so the camera works best high and in front, at about 45 degrees.
+- Vibration needs Chrome on Android.
+- Ultralytics is AGPL-3.0, so a commercial product would need to review that license.

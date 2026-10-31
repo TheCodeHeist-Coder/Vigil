@@ -124,3 +124,15 @@ class RunControl(BaseModel):
     revision: Literal["A", "B"] = "A"
     zones: list[Zone] | None = None
     procedure: Procedure | None = None
+
+
+class RunState(BaseModel):
+    bench: str
+    run_id: str
+    serial: str = ""
+    revision: Literal["A", "B"] = "A"
+    done: list[str] = Field(default_factory=list)
+    waived: list[str] = Field(default_factory=list)
+    active: str | None = None
+    held: bool = False
+    finished: bool = False

@@ -8,6 +8,7 @@ FLAGS = "flags"
 VERDICTS = "verdicts"
 INCIDENTS = "incidents"
 RUN_CONTROL = "run.control"
+RUN_STATE = "run.state"
 
 MINUTE_MS = 60_000
 GIGABYTE = 1024**3
@@ -26,4 +27,5 @@ TOPIC_CONFIG: dict[str, dict[str, str]] = {
     VERDICTS: {"retention.ms": str(7 * 24 * 60 * MINUTE_MS)},
     INCIDENTS: {"retention.ms": str(7 * 24 * 60 * MINUTE_MS)},
     RUN_CONTROL: {"retention.ms": str(7 * 24 * 60 * MINUTE_MS)},
+    RUN_STATE: {"retention.ms": str(60 * MINUTE_MS)},
 }

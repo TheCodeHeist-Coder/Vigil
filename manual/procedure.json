@@ -1,0 +1,12 @@
+{
+  "id": 0,
+  "doc_id": 0,
+  "revision": "A",
+  "steps": [
+    {"id": "S1", "section": "4.1", "title": "Lay the gasket in the tray", "bin": "A", "requires": [], "check": "A gasket lies flat inside the tray", "correction": "Stop. Install the gasket first."},
+    {"id": "S2", "section": "4.2", "title": "Seat the module on the gasket", "bin": "B", "requires": ["S1"], "check": "The module sits inside the gasket", "correction": "Stop. Seat the module first."},
+    {"id": "S3", "section": "4.3", "title": "Plug in the cable and route it through notch A", "bin": "C", "requires": ["S2"], "check": "The cable leaves the tray through notch A, not notch B", "correction": "Stop. Route the cable through notch A first."},
+    {"id": "S4", "section": "4.4", "title": "Fit the cover", "bin": "D", "requires": ["S3"], "check": "The cover is on the tray and the cable is still routed", "correction": "Stop. Fit the cover first."},
+    {"id": "S5", "section": "4.5", "title": "Fasten two clips, left then right", "bin": "E", "requires": ["S4"], "check": "Two clips hold the cover", "correction": "Stop. Fasten both clips."}
+  ]
+}

@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS verdicts (
   run_id uuid REFERENCES runs,
   step_id text,
   reason text,
+  revision text,
   status text NOT NULL,
   explanation text,
   citations jsonb,

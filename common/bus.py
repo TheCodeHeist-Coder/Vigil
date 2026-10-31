@@ -4,7 +4,7 @@ import json
 import time
 from collections.abc import Iterator
 
-from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
+from confluent_kafka import OFFSET_BEGINNING, OFFSET_END, Consumer, Producer, TopicPartition
 from pydantic import BaseModel
 
 from common.config import settings
@@ -27,19 +27,24 @@ def producer(**overrides: str | int) -> Producer:
     )
 
 
-def consumer(group: str, topics: list[str], from_start: bool = False) -> Consumer:
-    # Offsets are never committed, so a restart starts at the newest message
-    # and cannot replay old flags into Gemini.
+def consumer(name: str, topics: list[str], from_start: bool = False) -> Consumer:
+    """Claims partitions directly instead of joining a consumer group.
+
+    A killed group member blocks its replacement for up to 45 s, which would leave a
+    restarted service blind on stage. Offsets are never committed, so a restart also
+    starts at the newest message and cannot replay old flags into Gemini.
+    """
     c = Consumer(
         {
             "bootstrap.servers": settings.kafka_bootstrap,
-            "group.id": group,
-            "auto.offset.reset": "earliest" if from_start else "latest",
+            "group.id": name,
             "enable.auto.commit": False,
             "fetch.message.max.bytes": 2_097_152,
         }
     )
-    c.subscribe(topics)
+    start = OFFSET_BEGINNING if from_start else OFFSET_END
+    metadata = c.list_topics(timeout=10)
+    c.assign([TopicPartition(t, p, start) for t in topics for p in metadata.topics[t].partitions])
     return c
 
 

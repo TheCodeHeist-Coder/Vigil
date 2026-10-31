@@ -12,6 +12,9 @@ stop_all() {
       rm -f "logs/$name.pid"
     fi
   done
+  # Two copies of a service would both act on every message, so make sure none survive.
+  pkill -f '^\.venv/bin/python -m services\.' 2>/dev/null
+  sleep 1
   echo "stopped"
 }
 
@@ -24,12 +27,12 @@ stop_all >/dev/null
 docker compose up -d kafka
 echo "waiting for Kafka"
 for _ in $(seq 1 30); do
-  uv run python -m tools.topics >/dev/null 2>&1 && break
+  .venv/bin/python -m tools.topics >/dev/null 2>&1 && break
   sleep 1
 done
 
 for name in $SERVICES; do
-  nohup uv run python -m "services.$name.main" >"logs/$name.log" 2>&1 </dev/null &
+  nohup .venv/bin/python -m "services.$name.main" >"logs/$name.log" 2>&1 </dev/null &
   echo $! >"logs/$name.pid"
   echo "started $name"
 done

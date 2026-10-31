@@ -4,7 +4,7 @@ The four screens, in React and Vite. Run with `pnpm install` then `pnpm dev`, an
 
 | Page | Path | Use |
 | --- | --- | --- |
-| Operator | `#/` | Live bench, steps, alerts, verdicts and timers. Draw zones here. |
+| Bench | `#/` | Start a unit, follow each step, and see every alert and decision. Mark bench zones here. |
 | Camera | `#/camera` | Streams the camera to `ingest` over WebRTC |
 | Phone | `#/phone` | Voice and vibration for the operator. Use Chrome on Android, and tap to arm. |
 | Supervisor | `#/supervisor` | Results, incidents, manual search, and manual edits with approval |

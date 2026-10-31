@@ -37,7 +37,7 @@ Each service has its own folder and README, and talks to the others only through
 | [`services/reasoner`](services/reasoner) | Checks flagged events with Gemini and runs the incident agent |
 | [`services/knowledge`](services/knowledge) | Loads the manual into YugabyteDB as hierarchical embeddings |
 | [`services/gateway`](services/gateway) | Serves the screens over WebSockets and HTTP |
-| [`web`](web) | Operator, camera, phone and supervisor screens |
+| [`web`](web) | Bench, Camera, Phone and Supervisor screens |
 
 `contracts/` holds the shared message types and topic names. `common/` holds shared helpers. `tools/` holds run-once scripts.
 
@@ -60,10 +60,10 @@ uv run python -m services.knowledge.main manual/vg100.md
 
 Open <https://localhost:5173> and accept the certificate warning, then:
 
-1. On **Camera**, start streaming from a device that can see the bench.
-2. On **Operator**, draw each zone over the video using the zone buttons.
-3. On a second Android phone, open **Phone** and tap to arm it.
-4. On **Operator**, set the serial and revision, then press **Start run**.
+1. On **Camera**, start the camera on a device that can see the bench.
+2. On **Bench**, choose **Mark zones** and drag a box around each bin.
+3. On a second Android phone, open **Phone** and turn on alerts.
+4. On **Bench**, enter the serial, choose the revision, and press **Start assembly**.
 
 ## Keys
 

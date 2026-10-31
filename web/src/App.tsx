@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { AppBar, type Route } from "./components/AppBar";
 import { Camera } from "./pages/Camera";
 import { Operator } from "./pages/Operator";
 import { Phone } from "./pages/Phone";
 import { Supervisor } from "./pages/Supervisor";
+import { useStatus } from "./status";
 
 const PAGES = { "": Operator, camera: Camera, phone: Phone, supervisor: Supervisor };
-type Route = keyof typeof PAGES;
 
 const route = (): Route => {
   const name = location.hash.replace("#/", "");
@@ -14,6 +15,7 @@ const route = (): Route => {
 
 export function App() {
   const [page, setPage] = useState(route);
+  const status = useStatus();
 
   useEffect(() => {
     const onChange = () => setPage(route());
@@ -24,20 +26,7 @@ export function App() {
   const Page = PAGES[page];
   return (
     <>
-      <nav className="nav">
-        <a href="#/" className={page === "" ? "on" : ""}>
-          Operator
-        </a>
-        <a href="#/camera" className={page === "camera" ? "on" : ""}>
-          Camera
-        </a>
-        <a href="#/phone" className={page === "phone" ? "on" : ""}>
-          Phone
-        </a>
-        <a href="#/supervisor" className={page === "supervisor" ? "on" : ""}>
-          Supervisor
-        </a>
-      </nav>
+      <AppBar page={page} status={status} />
       <Page />
     </>
   );

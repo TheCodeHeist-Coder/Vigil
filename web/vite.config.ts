@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // A phone's camera needs HTTPS, so the dev server uses a self-signed certificate.
-const gateway = "http://localhost:8100";
+const gateway = process.env.VIGIL_GATEWAY ?? "http://localhost:8100";
 
 export default defineConfig({
   plugins: [react(), basicSsl()],

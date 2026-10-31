@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 
 from common.config import ROOT, settings
+from common.db import connect
 from services.knowledge import retrieve
 from services.knowledge.extract import with_step_ids
 from services.knowledge.main import ingest_text
@@ -67,14 +68,21 @@ def test_ingest_and_search_against_yugabyte(monkeypatch):
     monkeypatch.setattr("services.knowledge.embed.settings", replace(settings, gemini_api_key=""))
     monkeypatch.setattr("services.knowledge.extract.settings", replace(settings, gemini_api_key=""))
     doc_id, procedure_id, report = ingest_text(read_pages(MANUAL), "vg100-test")
-    assert doc_id and procedure_id
-    assert report["pages"] == 10 and report["steps"] == 5
+    try:
+        assert doc_id and procedure_id
+        assert report["pages"] == 10 and report["steps"] == 5
 
-    excerpts = retrieve.search("module installed before gasket", ["S1", "S2"])
-    sections = {e.section: e for e in excerpts}
-    assert {"4.1", "4.2"} <= set(sections)
-    assert sections["4.1"].reason == "step"
-    assert "Note 4.1" in sections["4.1"].body
+        excerpts = retrieve.search("module installed before gasket", ["S1", "S2"])
+        sections = {e.section: e for e in excerpts}
+        assert {"4.1", "4.2"} <= set(sections)
+        assert sections["4.1"].reason == "step"
+        assert "Note 4.1" in sections["4.1"].body
 
-    wiring = retrieve.search("cable notch B wiring path insulation damage")
-    assert any(e.section in ("3.4", "4.3", "6.2") for e in wiring)
+        wiring = retrieve.search("cable notch B wiring path insulation damage")
+        assert any(e.section in ("3.4", "4.3", "6.2") for e in wiring)
+    finally:
+        # Retrieval uses the newest document, so this test copy must not outlive the test.
+        with connect() as db:
+            db.execute("DELETE FROM procedures WHERE doc_id = %s", (doc_id,))
+            db.execute("DELETE FROM chunks WHERE doc_id = %s", (doc_id,))
+            db.execute("DELETE FROM documents WHERE id = %s", (doc_id,))

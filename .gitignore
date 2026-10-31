@@ -16,5 +16,4 @@ clips/*
 *.onnx
 data/
 .DS_Store
-web/public/voice/*.wav
 logs/

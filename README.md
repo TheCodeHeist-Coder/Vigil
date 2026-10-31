@@ -80,6 +80,7 @@ After adding `GEMINI_API_KEY`, run these once:
 uv run python -m tools.gemini_latency               # prints which model to use
 uv run python -m tools.render_voice                 # optional voice clips
 uv run python -m services.knowledge.main manual/vg100.md   # real embeddings
+uv run python -m tools.reset_runs                   # clears test data before real runs
 ```
 
 ## Test without a bench

@@ -31,7 +31,11 @@ ZONES = ROOT / "manual" / "zones.json"
 VIDEO_FPS = 15
 
 kafka = producer()
-meko_status = {"state": "off", "detail": "No MEKO_API_KEY set. Memory is in YugabyteDB."}
+meko_status = (
+    {"state": "checking", "detail": "Connecting to Meko."}
+    if settings.meko_api_key
+    else {"state": "off", "detail": "No MEKO_API_KEY set. Memory is in YugabyteDB."}
+)
 
 
 def check_meko() -> None:

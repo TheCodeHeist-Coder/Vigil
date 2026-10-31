@@ -27,12 +27,19 @@ def main() -> None:
     procedure = json.loads(PROCEDURE.read_text())
     for step in procedure["steps"]:
         name = f"{step['id']}.wav"
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=f"Say firmly and clearly: {step['correction']}",
-            config=types.GenerateContentConfig(response_modalities=["AUDIO"]),
-        )
-        pcm = response.candidates[0].content.parts[0].inline_data.data
+        if (VOICE_DIR / name).exists():
+            step["clip"] = name
+            continue
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=f"Say firmly and clearly: {step['correction']}",
+                config=types.GenerateContentConfig(response_modalities=["AUDIO"]),
+            )
+            pcm = response.candidates[0].content.parts[0].inline_data.data
+        except Exception as error:  # a step with no clip uses speech, so keep going
+            print(f"skipped {name}: {str(error)[:120]}")
+            continue
         with wave.open(str(VOICE_DIR / name), "wb") as audio:
             audio.setnchannels(1)
             audio.setsampwidth(2)

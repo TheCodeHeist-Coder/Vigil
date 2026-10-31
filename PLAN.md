@@ -4,9 +4,9 @@ We build the full PS stack on one bench laptop: WebRTC video into Kafka, YOLOv8-
 
 Only one PS item changes. Gemini 1.5 Flash no longer exists, so we use a current Gemini model.
 
-## Status at 04:05 IST
+## Status at 04:50 IST
 
-The whole application is built and running. Every service, all four screens, and real WebRTC from Chrome through Kafka work end to end. The team's remaining work is the physical bench, the two keys and the demo.
+The whole application is built and running, with live Gemini and Meko. The team's remaining work is the physical bench and the demo.
 
 | Measured on the demo laptop | Result |
 | --- | --- |
@@ -14,19 +14,23 @@ The whole application is built and running. Every service, all four screens, and
 | YOLOv8-Pose alone, 480 px, CPU | 29 fps |
 | Hand tracking through Kafka | 11 to 13 fps, median 95 ms from ingest |
 | Sequencer rule check | 2 ms |
-| Frame to alert on screen, simulated | 14 ms, not counting vision and camera time |
 | Four evidence frames from Kafka | 87 ms |
 | Vector search, 1,000 rows | 5 ms |
+| Gemini verdict, `gemini-3.5-flash-lite` with 4 images | Median 1.85 s in the speed test, 2 to 2.9 s through the service |
+| E1 and E3 with live Gemini | Confirmed and cleared, with real quotes |
+| E2 on 3 drawn photos, 3 times each | 9 of 9 correct, and an injected note was ignored |
+| Meko | Datapack, conversations, memory and traces working. `memory_search` takes about 10 s, so it runs in the background. |
 
-**Not tested yet:** live Gemini verdicts, live Meko, and tracking on real hands at a real bench. Gemini and Meko need keys. Real hands need the bench.
+`gemini-3.8-flash` returned 503 high demand during testing, so it is only the fallback.
+
+**Not tested yet:** tracking on real hands, Gemini on real camera photos, and voice and vibration on a real phone. All three need the bench.
 
 ## Do these next
 
-1. Put `GEMINI_API_KEY` and `MEKO_API_KEY` in `.env`. Get them from aistudio.google.com and cloud.mekodata.ai, then run the three commands in the README's Keys section.
-2. Build the bench below, stream the camera, draw the zones and run all three errors with real hands.
-3. Tune `DWELL_SECONDS` and `CLEAR_SECONDS` in `services/sequencer/zones.py` if picks are missed or false.
-4. Record clips into `clips/`, do the 20 test runs, and record the backup video.
-5. Ask the organisers whether a phone hotspot counts as a second connection. The site allows at most one connection per team.
+1. Build the bench below, stream the camera, draw the zones and run all three errors with real hands.
+2. Tune `DWELL_SECONDS` and `CLEAR_SECONDS` in `services/sequencer/zones.py` if picks are missed or false.
+3. Record clips into `clips/`, run `uv run python -m tools.reset_runs`, do the 20 test runs, and record the backup video.
+4. Ask the organisers whether a phone hotspot counts as a second connection. The site allows at most one connection per team.
 
 ## How it works
 
@@ -194,7 +198,7 @@ We have not seen whether prizes stack, or the YugabyteDB and Gemini entry rules,
 
 ## Still untested
 
-Live Gemini verdicts, live Meko calls, the camera angle, tracking on real hands, phone HTTPS and vibration on a real phone are all untested.
+The camera angle, tracking on real hands, Gemini on real camera photos, phone HTTPS and vibration on a real phone are all untested.
 
 ## Sources
 

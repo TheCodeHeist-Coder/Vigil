@@ -46,8 +46,8 @@ def ask(question: str) -> dict:
         return {"answer": top.body, "citation": {"section": top.section, "page": top.page, "quote": ""}}
 
     reply = _gemini(question, excerpts)
-    excerpt = next((e for e in excerpts if e.section == reply.get("section")), None)
-    quote = reply.get("quote", "")
-    if excerpt and quote and squash(quote) in squash(excerpt.body):
-        return {"answer": reply["answer"], "citation": {"section": excerpt.section, "page": excerpt.page, "quote": quote}}
+    quote = squash(reply.get("quote", ""))
+    excerpt = next((e for e in excerpts if quote and quote in squash(e.body)), None)
+    if excerpt:
+        return {"answer": reply["answer"], "citation": {"section": excerpt.section, "page": excerpt.page, "quote": reply["quote"]}}
     return {"answer": "I could not find this in the manual.", "citation": None}

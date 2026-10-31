@@ -10,7 +10,7 @@ from common.config import settings
 from contracts.models import Citation, Flag, Procedure, Verdict
 from services.knowledge.retrieve import Excerpt
 
-TIMEOUT_MS = 6000
+TIMEOUT_MS = 10000  # the lowest deadline the Gemini API accepts
 
 SYSTEM = """You audit one event at a manual assembly bench. Decide only from the manual excerpts and photos supplied.
 
@@ -84,19 +84,21 @@ def ask_gemini(prompt: str, frames: list[bytes]) -> Decision:
     client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
     parts = [types.Part.from_text(text=prompt)]
     parts += [types.Part.from_bytes(data=frame, mime_type="image/jpeg") for frame in frames]
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=parts,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM,
-            temperature=0,
-            response_mime_type="application/json",
-            response_json_schema=SCHEMA,
-            thinking_config=types.ThinkingConfig(thinking_level="low"),
-        ),
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM,
+        temperature=0,
+        response_mime_type="application/json",
+        response_json_schema=SCHEMA,
+        thinking_config=types.ThinkingConfig(thinking_level="low"),
     )
+    try:
+        model, response = settings.gemini_model, client.models.generate_content(model=settings.gemini_model, contents=parts, config=config)
+    except Exception as error:  # a busy model returns 503, so try the other one before giving up
+        print(f"{settings.gemini_model} failed, trying fallback: {str(error)[:120]}", flush=True)
+        model = settings.gemini_fallback_model
+        response = client.models.generate_content(model=model, contents=parts, config=config)
     body = json.loads(response.text)
-    return Decision(body["status"], body["explanation"], body["citations"], body.get("spoken", ""), settings.gemini_model)
+    return Decision(body["status"], body["explanation"], body["citations"], body.get("spoken", ""), model)
 
 
 def ask_rules(flag: Flag, procedure: Procedure, excerpts: list[Excerpt]) -> Decision:
@@ -126,12 +128,15 @@ def squash(text: str) -> str:
 
 
 def verified_citations(decision: Decision, excerpts: list[Excerpt]) -> list[Citation] | None:
-    """Returns citations only if every quote really is in the manual text we supplied."""
-    pages = {e.section: e for e in excerpts}
+    """Returns citations only if every quote really is in the manual text we supplied.
+
+    The section and page come from where the quote was found, never from the model's label.
+    """
     checked: list[Citation] = []
     for citation in decision.citations:
-        excerpt = pages.get(citation.get("section", ""))
-        if excerpt is None or squash(citation.get("quote", "")) not in squash(excerpt.body):
+        quote = squash(citation.get("quote", ""))
+        excerpt = next((e for e in excerpts if quote and quote in squash(e.body)), None)
+        if excerpt is None:
             return None
         checked.append(Citation(section=excerpt.section, page=excerpt.page, quote=citation["quote"]))
     return checked

@@ -87,9 +87,21 @@ class Sequencer:
 
     def on_verdict(self, verdict: Verdict) -> None:
         bench = self.bench(verdict.bench)
-        if bench.run and bench.run.run_id == verdict.run_id:
-            logic.on_verdict(bench.run, bench.procedure, verdict)
-            self.publish_state(bench)
+        if not bench.run or bench.run.run_id != verdict.run_id:
+            return
+        for output in logic.on_verdict(bench.run, bench.procedure, verdict):
+            offset = bench.history[-1][1] if bench.history else 0
+            event = BenchEvent(
+                id=str(uuid.uuid4()),
+                bench=bench.id,
+                run_id=bench.run.run_id,
+                kind="hands_clear",
+                zone="TRAY",
+                frame_offset=offset,
+                times=stamp(verdict.times, "sequencer"),
+            )
+            self.flag(bench, event, "step_check", output.step_id, None, [offset])
+        self.publish_state(bench)
 
     def evidence(self, bench: Bench, event: BenchEvent) -> list[int]:
         now = event.times.get("t_sequencer", time.time())

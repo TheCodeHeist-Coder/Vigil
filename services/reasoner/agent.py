@@ -75,7 +75,10 @@ def agent_report(flag: Flag, verdict: Verdict, procedure: Procedure, rework: lis
     client = genai.Client(api_key=settings.gemini_api_key)
     response = client.models.generate_content(
         model=settings.gemini_model,
-        contents=f"Fault at {verdict.step_id}, occurrence {occurrences}. Rework steps: {rework}",
+        contents=(
+            f"Fault at {verdict.step_id}, occurrence {occurrences}. Rework steps: {rework}. "
+            f"Sections the verdict cited: {[c.section for c in verdict.citations]}."
+        ),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM,
             temperature=0,
@@ -96,6 +99,8 @@ def investigate(flag: Flag, verdict: Verdict, procedure: Procedure, context: Age
         except Exception as error:
             print(f"incident agent failed, using template: {error}", flush=True)
     report = report or template_report(verdict, rework, occurrences)
+    if occurrences >= REPEAT_LIMIT and "6.4" not in report:
+        report += f" This is fault {occurrences} at this step, so manual section 6.4 applies: stop and raise it with the process engineer."
 
     incident = Incident(
         id=str(uuid.uuid4()),

@@ -4,6 +4,7 @@ import pytest
 
 from common.config import ROOT, settings
 from services.knowledge import retrieve
+from services.knowledge.extract import with_step_ids
 from services.knowledge.main import ingest_text
 from services.knowledge.parse import hierarchy, read_pages, split_markdown
 
@@ -42,6 +43,19 @@ def test_pdf_gives_the_same_structure_as_markdown():
     pdf_step = next(leaf for s in from_pdf for leaf in s.leaves if leaf.section == "4.1")
     assert pdf_step.page == 6
     assert "skip step 4.1" in " ".join(pdf_step.body.split())
+
+
+def test_extracted_steps_are_renumbered_with_their_dependencies():
+    body = {
+        "revision": "3",
+        "steps": [
+            {"id": "4.1", "section": "4.1", "title": "a", "bin": "A", "requires": [], "check": "c", "correction": "x"},
+            {"id": "4.2", "section": "4.2", "title": "b", "bin": "B", "requires": ["4.1"], "check": "c", "correction": "y"},
+        ],
+    }
+    procedure = with_step_ids(body)
+    assert [s.id for s in procedure.steps] == ["S1", "S2"]
+    assert procedure.steps[1].requires == ["S1"]
 
 
 def test_unmarked_text_is_one_page():

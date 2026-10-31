@@ -13,6 +13,7 @@ from common.config import ROOT, settings
 from common.db import connect
 from contracts.models import Flag, Procedure, RunControl, Verdict
 from contracts.topics import FLAGS, FRAMES_RAW, INCIDENTS, RUN_CONTROL, VERDICTS
+from services.knowledge.embed import embed
 from services.knowledge.retrieve import search
 from services.reasoner.agent import investigate
 from services.reasoner.context import VERDICT_AGENT, AgentContext, build_context
@@ -124,14 +125,22 @@ def store(flag: Flag, verdict: Verdict) -> None:
         )
 
 
+def step_query(procedure: Procedure, step_id: str) -> str:
+    return f"{procedure.step(step_id).title}: rules, exceptions and rework"
+
+
+def warm_queries(procedure: Procedure) -> None:
+    """Embeds every verdict query ahead of time, because a live embed costs about 1.5 s."""
+    embed([step_query(procedure, step.id) for step in procedure.steps])
+
+
 def decide(flag: Flag, procedure: Procedure, context: AgentContext, frames: FrameReader) -> Verdict:
     if settings.replay:
         saved = saved_verdict(flag)
         if saved:
             return saved
     steps = [s for s in (flag.expected_step, flag.actual_step) if s]
-    query = " ".join(procedure.step(s).title for s in steps)
-    excerpts = search(query, steps)
+    excerpts = search(step_query(procedure, flag.expected_step), steps)
     images = frames.read(flag.frame_offsets)
     return judge(flag, procedure, excerpts, context.recall(flag.expected_step), images)
 
@@ -142,6 +151,7 @@ def main() -> None:
     frames = FrameReader()
     procedure = load_procedure()
     agents = ThreadPoolExecutor(2, thread_name_prefix="incident")
+    warm_queries(procedure)
     c = consumer("reasoner", [FLAGS, RUN_CONTROL])
 
     def run_incident(flag: Flag, verdict: Verdict) -> None:
@@ -165,6 +175,7 @@ def main() -> None:
                 context.start_run(control.run_id, control.serial or "", [s.id for s in procedure.steps])
             elif control.kind == "procedure" and control.procedure:
                 procedure = control.procedure
+                warm_queries(procedure)
             continue
 
         flag = Flag(**body)

@@ -10,7 +10,9 @@ Use only the manual text. Take each step from the numbered steps of the assembly
 bin is the single bin letter named in the step or the parts list.
 requires holds the step that must come first. The first step has none.
 check says what a photo of the finished step must show.
-correction is a short spoken order for an operator who skipped this step, like "Stop. Install the gasket first."
+correction is a short spoken order naming this step's own action, said when an operator skipped this step.
+For a gasket step that is "Stop. Install the gasket first." For a cover step it is "Stop. Fit the cover first."
+Never reuse the wording of another step.
 Ignore notes about skipping steps: they are decided at run time."""
 
 SCHEMA = {
@@ -38,6 +40,15 @@ SCHEMA = {
 }
 
 
+def with_step_ids(body: dict) -> Procedure:
+    """Numbers steps S1, S2 and so on in code, because the rest of the system relies on these ids."""
+    new_ids = {step["id"]: f"S{i}" for i, step in enumerate(body["steps"], start=1)}
+    for step in body["steps"]:
+        step["id"] = new_ids[step["id"]]
+        step["requires"] = [new_ids[r] for r in step["requires"] if r in new_ids]
+    return Procedure(**body)
+
+
 def baseline() -> Procedure:
     return Procedure(**json.loads((ROOT / "manual" / "procedure.json").read_text()))
 
@@ -60,4 +71,4 @@ def extract(manual: str) -> Procedure:
             response_json_schema=SCHEMA,
         ),
     )
-    return Procedure(**json.loads(response.text))
+    return with_step_ids(json.loads(response.text))

@@ -4,11 +4,12 @@ import hashlib
 import json
 import math
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from common.config import ROOT, settings
 
 DIMENSIONS = 768
-BATCH = 50
+WORKERS = 6
 CACHE = ROOT / "data" / "embeddings"
 
 
@@ -28,19 +29,19 @@ def local_embedding(text: str) -> list[float]:
 
 
 def _gemini(texts: list[str]) -> list[list[float]]:
+    """One call per text, because this model merges a list of contents into a single vector."""
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=settings.gemini_api_key)
-    vectors: list[list[float]] = []
-    for start in range(0, len(texts), BATCH):
-        result = client.models.embed_content(
-            model=settings.gemini_embed_model,
-            contents=texts[start : start + BATCH],
-            config=types.EmbedContentConfig(output_dimensionality=DIMENSIONS),
-        )
-        vectors += [list(e.values) for e in result.embeddings]
-    return vectors
+    config = types.EmbedContentConfig(output_dimensionality=DIMENSIONS)
+
+    def one(text: str) -> list[float]:
+        result = client.models.embed_content(model=settings.gemini_embed_model, contents=text, config=config)
+        return list(result.embeddings[0].values)
+
+    with ThreadPoolExecutor(WORKERS) as pool:
+        return list(pool.map(one, texts))
 
 
 def embed(texts: list[str]) -> list[list[float]]:

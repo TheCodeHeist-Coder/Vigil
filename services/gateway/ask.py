@@ -23,7 +23,7 @@ def _gemini(question: str, excerpts: list[Excerpt]) -> dict:
     from google.genai import types
 
     context = "\n".join(f"[Section {e.section}, page {e.page}]\n{e.body}" for e in excerpts)
-    client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=8000))
+    client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=10000))
     response = client.models.generate_content(
         model=settings.gemini_model,
         contents=f"Question: {question}\n\nManual excerpts:\n{context}",

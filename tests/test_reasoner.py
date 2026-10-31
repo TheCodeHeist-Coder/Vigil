@@ -8,7 +8,7 @@ from contracts.models import BenchEvent, Flag, Procedure
 from services.knowledge.parse import hierarchy, read_pages
 from services.knowledge.retrieve import Excerpt
 from services.reasoner.agent import rework_steps, template_report
-from services.reasoner.context import memories
+from services.reasoner.context import memories, notes_by_step
 from services.reasoner.judge import Decision, ask_rules, judge, verified_citations
 from services.reasoner.meko import MekoClient, MekoError
 
@@ -43,6 +43,17 @@ def test_true_quote_is_accepted_with_page_from_the_manual():
     decision = Decision("confirmed", "x", [{"section": "4.3", "quote": "The cable must not pass through notch B."}], "", "m")
     citations = verified_citations(decision, EXCERPTS)
     assert citations[0].page == 7
+
+
+def test_section_and_page_come_from_the_manual_not_the_model():
+    decision = Decision("cleared", "x", [{"section": "Section 9.9, page 99", "quote": "skip step 4.1 and start at step 4.2"}], "", "m")
+    citations = verified_citations(decision, EXCERPTS)
+    assert citations[0].section == "4.1" and citations[0].page == 6
+
+
+def test_empty_quote_is_rejected():
+    decision = Decision("confirmed", "x", [{"section": "4.1", "quote": ""}], "", "m")
+    assert verified_citations(decision, EXCERPTS) is None
 
 
 def test_invented_quote_downgrades_to_uncertain():
@@ -142,3 +153,20 @@ def test_meko_tool_error_raises():
 
     with pytest.raises(MekoError, match="conversation_id"):
         meko(handler).call("memory_search", query="x")
+
+
+def test_meko_error_returned_as_data_raises():
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if "id" not in body:
+            return httpx.Response(202)
+        text = json.dumps({"error": "conversation_id_required", "detail": "Pass conversation_id."})
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": body["id"], "result": {"content": [{"type": "text", "text": text}]}})
+
+    with pytest.raises(MekoError, match="conversation_id_required"):
+        meko(handler).call("datapack_search", name="x")
+
+
+def test_memories_group_by_their_step():
+    found = {"results": [{"memory": "a", "metadata": {"step_id": "S3"}}, {"memory": "b", "metadata": {"step_id": "S1"}}, {"memory": "c", "metadata": {}}]}
+    assert notes_by_step(found) == {"S3": ["a"], "S1": ["b"]}

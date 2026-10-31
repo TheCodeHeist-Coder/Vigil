@@ -5,6 +5,8 @@ memory stays in YugabyteDB. Every Meko call runs on its own thread, so a slow ne
 can never delay a verdict. Agents read notes fetched ahead of time, never live.
 """
 
+import json
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
@@ -17,16 +19,21 @@ VERDICT_AGENT = "vigil-verdict"
 INCIDENT_AGENT = "vigil-incident"
 
 
-def _text(item: Any) -> str:
-    if isinstance(item, dict):
-        return str(item.get("memory") or item.get("text") or item.get("content") or item)
-    return str(item)
+def _items(result: Any) -> list:
+    return (result.get("results") or []) if isinstance(result, dict) else (result or [])
 
 
 def memories(result: Any) -> list[str]:
-    if isinstance(result, dict):
-        result = result.get("results") or result.get("memories") or result.get("items") or []
-    return [_text(item) for item in result or []]
+    return [item["memory"] if isinstance(item, dict) else str(item) for item in _items(result)]
+
+
+def notes_by_step(result: Any) -> dict[str, list[str]]:
+    notes: dict[str, list[str]] = {}
+    for item in _items(result):
+        step_id = (item.get("metadata") or {}).get("step_id")
+        if step_id:
+            notes.setdefault(step_id, []).append(item["memory"])
+    return notes
 
 
 @dataclass
@@ -63,43 +70,38 @@ class AgentContext:
             title=title or f"Run {run_id[:8]}",
             run_id=run_id,
         )
-        conversation = created.get("conversation_id") or created.get("id") if isinstance(created, dict) else str(created)
-        self.conversations[run_id] = conversation
-        return conversation
+        self.conversations[run_id] = created["id"]
+        return created["id"]
 
-    def _find_datapack(self, conversation_id: str | None = None) -> None:
-        found = self.client.call("datapack_search", name=settings.meko_datapack_name, conversation_id=conversation_id)
-        packs = found.get("datapacks") or found.get("results") or found.get("items") or [] if isinstance(found, dict) else found
+    def _find_datapack(self) -> None:
+        # Meko needs a conversation before it will search datapacks.
+        start = self.client.call("conversation_create", agent_id=VERDICT_AGENT, session_id=str(uuid.uuid4()), title="Vigil start")
+        found = self.client.call("datapack_search", name=settings.meko_datapack_name, conversation_id=start["id"])
+        packs = found.get("datapacks") or []
         if packs:
             self.datapack_id = packs[0].get("datapack_id") or packs[0].get("id")
-            return
-        created = self.client.call("datapack_create", name=settings.meko_datapack_name, conversation_id=conversation_id)
-        self.datapack_id = created.get("datapack_id") or created.get("id")
+        else:
+            created = self.client.call("datapack_create", name=settings.meko_datapack_name, conversation_id=start["id"])
+            self.datapack_id = created["datapack_id"]
 
-    def _start_run(self, run_id: str, title: str, steps: list[str]) -> None:
-        if self.client is None:
-            return
+    def _start_run(self, run_id: str, title: str) -> None:
         if not self.datapack_id:
             self._find_datapack()
         conversation = self._conversation(run_id, title)
-        for step_id in steps:
-            self.notes[step_id] = memories(
-                self.client.call(
-                    "memory_search",
-                    query=f"faults at step {step_id}",
-                    conversation_id=conversation,
-                    agent_id=VERDICT_AGENT,
-                    datapack_id=self.datapack_id,
-                    limit=3,
-                )
-            )
+        # memory_search takes about 10 s, so one search runs here on Meko's own thread.
+        found = self.client.call(
+            "memory_search",
+            query="assembly faults and rework at each step",
+            conversation_id=conversation,
+            agent_id=VERDICT_AGENT,
+            datapack_id=self.datapack_id,
+            limit=20,
+        )
+        self.notes.update(notes_by_step(found))
         self.error = ""
 
     def start_run(self, run_id: str, serial: str, steps: list[str]) -> None:
-        """Opens the conversation and fetches notes, so verdicts can read them instantly."""
-        if self.client:
-            self._background(self._start_run, run_id, f"Unit {serial}", steps)
-            return
+        """Loads notes ahead of time, so verdicts can read them instantly."""
         with connect() as db:
             for step_id in steps:
                 rows = db.execute(
@@ -107,6 +109,8 @@ class AgentContext:
                     (step_id,),
                 ).fetchall()
                 self.notes[step_id] = [row[0] for row in rows]
+        if self.client:
+            self._background(self._start_run, run_id, f"Unit {serial}")
 
     def recall(self, step_id: str) -> list[str]:
         return self.notes.get(step_id, [])
@@ -118,7 +122,7 @@ class AgentContext:
             conversation_id=self._conversation(run_id),
             agent_id=INCIDENT_AGENT,
             run_id=run_id,
-            metadata={"step_id": step_id},
+            metadata=json.dumps({"step_id": step_id}),  # Meko takes metadata as a JSON string
             datapack_id=self.datapack_id,
         )
 

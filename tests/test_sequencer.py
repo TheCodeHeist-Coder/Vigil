@@ -84,6 +84,31 @@ def test_e2_failed_step_check_reopens_the_step():
     assert run.active == "S3"
 
 
+def test_e3_work_done_before_the_verdict_arrives_is_credited():
+    run = logic.Run("r", revision="B")
+    logic.on_pick(run, PROCEDURE, "B")
+    logic.on_place(run)
+    logic.on_hands_clear(run)
+    outputs = logic.on_verdict(run, PROCEDURE, verdict(run, "out_of_sequence", "cleared", "S1"))
+    assert run.done == ["S2"] and run.waived == ["S1"] and run.active is None
+    assert isinstance(outputs[0], logic.StepFinished) and outputs[0].step_id == "S2"
+
+
+def test_no_second_flag_while_a_verdict_is_pending():
+    run = logic.Run("r", revision="B")
+    logic.on_pick(run, PROCEDURE, "B")
+    assert logic.on_pick(run, PROCEDURE, "C") == []
+    assert run.held == ("S1", "S2")
+
+
+def test_new_error_can_flag_once_the_verdict_is_in():
+    run = logic.Run("r")
+    logic.on_pick(run, PROCEDURE, "B")
+    logic.on_verdict(run, PROCEDURE, verdict(run, "out_of_sequence", "confirmed", "S1"))
+    outputs = logic.on_pick(run, PROCEDURE, "C")
+    assert outputs[0].expected == "S2" and outputs[0].actual == "S3"
+
+
 def test_inside_polygon():
     tray = next(z for z in ZONES if z.kind == "tray")
     assert inside(TRAY, tray.polygon)

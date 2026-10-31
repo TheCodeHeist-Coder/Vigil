@@ -17,7 +17,7 @@ class MekoError(RuntimeError):
 
 
 class MekoClient:
-    def __init__(self, url: str, api_key: str, timeout: float = 8.0, transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(self, url: str, api_key: str, timeout: float = 30.0, transport: httpx.BaseTransport | None = None) -> None:
         self.url = url
         self.api_key = api_key
         self.session_id: str | None = None
@@ -84,13 +84,13 @@ class MekoClient:
         self._ensure_ready()
         return [tool["name"] for tool in self._rpc("tools/list", {}).get("tools", [])]
 
-    def call(self, name: str, **arguments: Any) -> Any:
+    def call(self, tool: str, /, **arguments: Any) -> Any:
         self._ensure_ready()
         arguments = {k: v for k, v in arguments.items() if v is not None}
-        result = self._rpc("tools/call", {"name": name, "arguments": arguments}) or {}
+        result = self._rpc("tools/call", {"name": tool, "arguments": arguments}) or {}
         texts = [c.get("text", "") for c in result.get("content", []) if c.get("type") == "text"]
         if result.get("isError"):
-            raise MekoError("\n".join(texts) or f"{name} failed")
+            raise MekoError("\n".join(texts) or f"{tool} failed")
         if not texts:
             return result
         try:
@@ -102,6 +102,8 @@ class MekoClient:
                 parsed = json.loads(parsed)
             except ValueError:
                 break
+        if isinstance(parsed, dict) and parsed.get("error"):  # some failures arrive as normal data
+            raise MekoError(f"{tool}: {parsed['error']} {parsed.get('detail', '')}")
         return parsed
 
     def close(self) -> None:

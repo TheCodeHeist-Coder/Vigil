@@ -6,6 +6,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+import common.net  # noqa: F401  # must apply before any network call
+
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
@@ -16,7 +18,8 @@ class Settings:
     kafka_bootstrap: str = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
     database_url: str = os.getenv("DATABASE_URL", "postgresql://yugabyte@localhost:5433/vigil")
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    gemini_fallback_model: str = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.8-flash")
     gemini_embed_model: str = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-2")
     meko_api_key: str = os.getenv("MEKO_API_KEY", "")
     meko_mcp_url: str = os.getenv("MEKO_MCP_URL", "https://mcp.mekodata.ai/mcp")

@@ -28,12 +28,14 @@ def producer(**overrides: str | int) -> Producer:
 
 
 def consumer(group: str, topics: list[str], from_start: bool = False) -> Consumer:
+    # Offsets are never committed, so a restart starts at the newest message
+    # and cannot replay old flags into Gemini.
     c = Consumer(
         {
             "bootstrap.servers": settings.kafka_bootstrap,
             "group.id": group,
             "auto.offset.reset": "earliest" if from_start else "latest",
-            "enable.auto.commit": True,
+            "enable.auto.commit": False,
             "fetch.message.max.bytes": 2_097_152,
         }
     )

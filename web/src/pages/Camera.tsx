@@ -18,7 +18,10 @@ export function Camera() {
     if (stopped.current || !stream.current) return;
     const pc = new RTCPeerConnection({ iceServers: [] });
     peer.current = pc;
-    stream.current.getVideoTracks().forEach((track) => pc.addTrack(track, stream.current!));
+    stream.current.getVideoTracks().forEach((track) => {
+      track.contentHint = "detail"; // keep resolution, and drop frame rate first if the link is slow
+      pc.addTrack(track, stream.current!);
+    });
     pc.onconnectionstatechange = () => {
       setState(pc.connectionState);
       if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {

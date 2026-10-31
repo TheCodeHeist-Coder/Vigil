@@ -1,6 +1,7 @@
 """Reads flags, decides each one with the manual and Gemini, and publishes verdicts."""
 
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import cv2
@@ -18,6 +19,7 @@ from services.reasoner.context import VERDICT_AGENT, AgentContext, build_context
 from services.reasoner.judge import judge
 
 FRAME_WIDTH = 640
+READ_SECONDS = 0.6
 
 
 class FrameReader:
@@ -30,23 +32,39 @@ class FrameReader:
                 "group.id": "reasoner-frames",
                 "enable.auto.commit": False,
                 "fetch.message.max.bytes": 2_097_152,
+                "fetch.wait.max.ms": 10,
             }
         )
 
+    @staticmethod
+    def _shrink(jpeg: bytes) -> bytes | None:
+        image = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
+        if image is None:
+            return None
+        height, width = image.shape[:2]
+        small = cv2.resize(image, (FRAME_WIDTH, height * FRAME_WIDTH // width))
+        return cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 80])[1].tobytes()
+
     def read(self, offsets: list[int]) -> list[bytes]:
-        frames: list[bytes] = []
-        for offset in offsets:
-            self.c.assign([TopicPartition(FRAMES_RAW, 0, offset)])
-            msg = self.c.poll(0.5)
-            if msg is None or msg.error():
-                continue
-            image = cv2.imdecode(np.frombuffer(msg.value(), np.uint8), cv2.IMREAD_COLOR)
-            if image is None:
-                continue
-            height, width = image.shape[:2]
-            small = cv2.resize(image, (FRAME_WIDTH, height * FRAME_WIDTH // width))
-            frames.append(cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 80])[1].tobytes())
-        return frames
+        """Assigns once and reads forward, because re-assigning for each frame stalls for seconds."""
+        if not offsets:
+            return []
+        wanted, last = set(offsets), max(offsets)
+        found: dict[int, bytes] = {}
+        self.c.assign([TopicPartition(FRAMES_RAW, 0, min(offsets))])
+        deadline = time.perf_counter() + READ_SECONDS
+        reading = True
+        while reading and time.perf_counter() < deadline:
+            for msg in self.c.consume(num_messages=64, timeout=0.05):
+                if msg.error():
+                    continue
+                if msg.offset() in wanted:
+                    found[msg.offset()] = msg.value()
+                if msg.offset() >= last:
+                    reading = False
+        self.c.unassign()
+        shrunk = [self._shrink(found[offset]) for offset in sorted(found)]
+        return [jpeg for jpeg in shrunk if jpeg]
 
 
 def load_procedure() -> Procedure:

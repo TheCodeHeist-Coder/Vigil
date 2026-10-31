@@ -29,12 +29,16 @@ for _ in $(seq 1 30); do
 done
 
 for name in $SERVICES; do
-  nohup uv run python -m "services.$name.main" >"logs/$name.log" 2>&1 &
+  nohup uv run python -m "services.$name.main" >"logs/$name.log" 2>&1 </dev/null &
   echo $! >"logs/$name.pid"
   echo "started $name"
 done
 
-(cd web && nohup pnpm dev >../logs/web.log 2>&1 & echo $! >../logs/web.pid)
+(
+  cd web
+  nohup pnpm dev >../logs/web.log 2>&1 </dev/null &
+  echo $! >../logs/web.pid
+)
 echo "started web"
 echo
 echo "Operator    https://localhost:5173/#/"

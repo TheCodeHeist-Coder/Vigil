@@ -110,3 +110,17 @@ def test_hand_in_tray_without_a_pick_is_not_a_place():
     tracker = ZoneTracker(ZONES)
     assert tracker.update([TRAY], 0.0) == []
     assert tracker.update([TRAY], 0.5) == []
+
+
+def test_one_missed_detection_does_not_reset_a_pick():
+    tracker = ZoneTracker(ZONES)
+    assert tracker.update([BIN_A], 0.0) == []
+    assert tracker.update([], 0.09) == []
+    assert tracker.update([BIN_A], 0.21) == [("pick", "A")]
+
+
+def test_hand_that_really_left_does_not_count():
+    tracker = ZoneTracker(ZONES)
+    tracker.update([BIN_A], 0.0)
+    assert tracker.update([REST], 0.3) == []
+    assert tracker.update([BIN_A], 0.35) == []

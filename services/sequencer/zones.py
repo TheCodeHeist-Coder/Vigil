@@ -6,6 +6,7 @@ from contracts.models import Point, Zone
 
 DWELL_SECONDS = 0.2
 CLEAR_SECONDS = 0.7
+GRACE_SECONDS = 0.25  # one missed detection must not reset a dwell
 
 
 def inside(point: Point, polygon: list[Point]) -> bool:
@@ -24,6 +25,7 @@ def inside(point: Point, polygon: list[Point]) -> bool:
 class ZoneTracker:
     zones: list[Zone]
     entered: dict[str, float] = field(default_factory=dict)
+    last_seen: dict[str, float] = field(default_factory=dict)
     fired: set[str] = field(default_factory=set)
     carrying: bool = False
     placed: bool = False
@@ -32,8 +34,9 @@ class ZoneTracker:
     def update(self, hands: list[Point], now: float) -> list[tuple[str, str]]:
         events: list[tuple[str, str]] = []
         for zone in self.zones:
-            occupied = any(inside(hand, zone.polygon) for hand in hands)
-            if not occupied:
+            if any(inside(hand, zone.polygon) for hand in hands):
+                self.last_seen[zone.id] = now
+            elif now - self.last_seen.get(zone.id, -1e9) > GRACE_SECONDS:
                 self.entered.pop(zone.id, None)
                 self.fired.discard(zone.id)
                 continue

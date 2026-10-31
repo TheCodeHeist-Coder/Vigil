@@ -39,3 +39,4 @@ torch = { index = "pytorch-cpu" }
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = ["integration: needs Kafka or YugabyteDB running"]

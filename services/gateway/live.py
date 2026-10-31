@@ -46,6 +46,10 @@ class Hub:
     def leave(self, socket: WebSocket) -> None:
         self.sockets.discard(socket)
 
+    async def announce(self, topic: str, body: dict) -> None:
+        """Tells every screen about something that did not come from Kafka."""
+        await self._broadcast(json.dumps({"topic": topic, "body": body}))
+
     async def _broadcast(self, text: str) -> None:
         for socket in list(self.sockets):
             try:

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { AppBar, type Route } from "./components/AppBar";
+import { Bench } from "./pages/Bench";
 import { Camera } from "./pages/Camera";
-import { Operator } from "./pages/Operator";
 import { Phone } from "./pages/Phone";
 import { Supervisor } from "./pages/Supervisor";
 import { useStatus } from "./status";
 
-const PAGES = { "": Operator, camera: Camera, phone: Phone, supervisor: Supervisor };
+const PAGES = { "": Bench, camera: Camera, phone: Phone, supervisor: Supervisor };
 
 const route = (): Route => {
   const name = location.hash.replace("#/", "");
@@ -27,7 +27,7 @@ export function App() {
   return (
     <>
       <AppBar page={page} status={status} />
-      <Page />
+      <Page status={status} />
     </>
   );
 }

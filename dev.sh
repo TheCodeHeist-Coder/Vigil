@@ -45,7 +45,7 @@ done
 )
 echo "started web"
 echo
-echo "Operator    https://localhost:5173/#/"
+echo "Bench       https://localhost:5173/#/"
 echo "Camera      https://localhost:5173/#/camera"
 echo "Phone       https://<this-laptop-ip>:5173/#/phone"
 echo "Supervisor  https://localhost:5173/#/supervisor"

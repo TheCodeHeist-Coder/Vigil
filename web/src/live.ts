@@ -9,11 +9,12 @@ export type Live = {
   alertMs: number | null;
   verdict: Verdict | null;
   incident: Incident | null;
+  checks: Record<string, Verdict["status"]>; // photo check result per step
 };
 
 type Handlers = { onAlert?: (a: ReflexAlert) => void; onVerdict?: (v: Verdict) => void };
 
-const empty: Live = { connected: false, track: null, state: null, alert: null, alertMs: null, verdict: null, incident: null };
+const empty: Live = { connected: false, track: null, state: null, alert: null, alertMs: null, verdict: null, incident: null, checks: {} };
 
 export function useLive(handlers: Handlers = {}): Live {
   const [live, setLive] = useState<Live>(empty);
@@ -35,18 +36,20 @@ export function useLive(handlers: Handlers = {}): Live {
       socket.onmessage = (event) => {
         const { topic, body } = JSON.parse(event.data);
         if (topic === "hand.tracks") setLive((l) => ({ ...l, track: body }));
+        else if (topic === "run.ended") setLive((l) => ({ ...empty, connected: l.connected, track: l.track }));
         else if (topic === "run.state")
-          setLive((l) => {
-            const newRun = l.state?.run_id !== body.run_id;
-            return newRun ? { ...l, state: body, alert: null, alertMs: null, verdict: null, incident: null } : { ...l, state: body };
-          });
+          setLive((l) => (l.state?.run_id === body.run_id ? { ...l, state: body } : { ...empty, connected: l.connected, track: l.track, state: body }));
         else if (topic === "alerts.reflex") {
           // Same laptop, same clock: this is frame received to alert on screen.
           const alertMs = Math.round(Date.now() - body.times.t_ingest * 1000);
           setLive((l) => ({ ...l, alert: body, alertMs, verdict: null, incident: null }));
           latest.current.onAlert?.(body);
         } else if (topic === "verdicts") {
-          setLive((l) => ({ ...l, verdict: body }));
+          setLive((l) => ({
+            ...l,
+            verdict: body,
+            checks: body.reason === "step_check" ? { ...l.checks, [body.step_id]: body.status } : l.checks,
+          }));
           latest.current.onVerdict?.(body);
         } else if (topic === "incidents") setLive((l) => ({ ...l, incident: body }));
       };

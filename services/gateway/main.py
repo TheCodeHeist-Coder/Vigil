@@ -138,8 +138,10 @@ def start_run(body: NewRun) -> dict:
 
 
 @app.post("/api/runs/stop")
-def stop_run(bench: str = settings.bench_id) -> dict:
+async def stop_run(bench: str = settings.bench_id) -> dict:
     control(RunControl(kind="stop", bench=bench))
+    hub.last_state = None
+    await hub.announce("run.ended", {})
     return {"ok": True}
 
 

@@ -113,4 +113,4 @@ def health() -> dict[str, int]:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8101, log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=8101, log_level="warning", timeout_graceful_shutdown=1)

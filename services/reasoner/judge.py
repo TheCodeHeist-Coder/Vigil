@@ -146,7 +146,10 @@ def judge(flag: Flag, procedure: Procedure, excerpts: list[Excerpt], notes: list
     started = time.perf_counter()
     prompt = describe(flag, procedure, excerpts, notes)
     try:
-        if ask:
+        if flag.reason == "step_check" and not frames:
+            # With no photo the model guesses, and a guessed pass is the worst possible answer.
+            decision = Decision("uncertain", "No photo was available to check this step.", [], "", "none")
+        elif ask:
             decision = ask(prompt, frames)
         elif settings.gemini_api_key:
             decision = ask_gemini(prompt, frames)

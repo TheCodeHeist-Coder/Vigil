@@ -39,6 +39,14 @@ def test_rules_cannot_pass_a_photo_check():
     assert decision.status == "uncertain"
 
 
+def test_photo_check_with_no_photo_never_reaches_the_model():
+    def fail(prompt, frames):
+        raise AssertionError("the model must not be asked")
+
+    verdict = judge(flag(reason="step_check", expected="S3", actual=None), PROCEDURE, EXCERPTS, [], [], ask=fail)
+    assert verdict.status == "uncertain"
+
+
 def test_true_quote_is_accepted_with_page_from_the_manual():
     decision = Decision("confirmed", "x", [{"section": "4.3", "quote": "The cable must not pass through notch B."}], "", "m")
     citations = verified_citations(decision, EXCERPTS)

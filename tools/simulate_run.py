@@ -32,10 +32,10 @@ def centre(zone: Zone) -> tuple[float, float]:
     return sum(xs) / len(xs), sum(ys) / len(ys)
 
 
-def path(zones: dict[str, Zone], visits: list[str]):
+def path(zones: dict[str, Zone], visits: list[str], rest_frames: int = 15):
     """Yields hand positions: rest, bin, tray, rest for each visit."""
     for bin_id in visits:
-        for target, frames in ((REST, 3), (centre(zones[bin_id]), 6), (REST, 2), (centre(zones[TRAY]), 6), (REST, 15)):
+        for target, frames in ((REST, 3), (centre(zones[bin_id]), 6), (REST, 2), (centre(zones[TRAY]), 6), (REST, rest_frames)):
             for _ in range(frames):
                 yield target
 
@@ -47,7 +47,9 @@ def play(scenario: str, revision: str, bench: str, serial: str | None = None, ga
     publish(p, RUN_CONTROL, RunControl(kind="start", bench=bench, run_id=run_id, serial=serial or f"SIM-{run_id[:6]}", revision=revision), bench)
     p.flush(5)
     time.sleep(0.5)
-    for i, point in enumerate(path(zones, SCENARIOS[scenario])):
+    # A real operator stops at an alert, so e3 waits long enough for each verdict.
+    rest_frames = 60 if scenario == "e3" else 15
+    for i, point in enumerate(path(zones, SCENARIOS[scenario], rest_frames)):
         now = time.time()
         track = HandTrack(
             bench=bench,

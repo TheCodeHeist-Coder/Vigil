@@ -137,9 +137,9 @@ class AgentContext:
         self.client.call(
             "conversation_add_message",
             conversation_id=self._conversation(run_id),
-            input=question,
+            input=f"[{agent}] {question}",
             output=answer,
-            agent_id=agent,
+            agent_id=VERDICT_AGENT,  # Meko only accepts the agent that created the conversation
             reasoning=reasoning,
             datapack_id=self.datapack_id,
         )

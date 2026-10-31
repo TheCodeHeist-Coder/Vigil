@@ -14,7 +14,8 @@ stop_all() {
   done
   # Two copies of a service would both act on every message, so make sure none survive.
   pkill -f '^\.venv/bin/python -m services\.' 2>/dev/null
-  sleep 1
+  sleep 2
+  pkill -9 -f '^\.venv/bin/python -m services\.' 2>/dev/null
   echo "stopped"
 }
 

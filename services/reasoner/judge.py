@@ -167,9 +167,11 @@ def judge(flag: Flag, procedure: Procedure, excerpts: list[Excerpt], notes: list
         print(f"gemini failed, using local rules: {error}", flush=True)
         decision = ask_rules(flag, procedure, excerpts)
 
-    if flag.reason == "out_of_sequence" and decision.status == "cleared" and not revision_allows(decision, flag):
-        # The model once cleared a real fault on Rev A using a Rev B note, so code has the last word.
-        print(f"refused a clear with no Rev {flag.unit_revision} rule: {decision.explanation[:120]}", flush=True)
+    # An order check has two outcomes: a note allows it for this revision, or it is a fault.
+    # The model once cleared a real Rev A fault using a Rev B note, so code has the last word.
+    wrong_clear = decision.status == "cleared" and not revision_allows(decision, flag)
+    if flag.reason == "out_of_sequence" and (wrong_clear or decision.status == "uncertain"):
+        print(f"order check settled by rules, model said {decision.status}: {decision.explanation[:120]}", flush=True)
         decision = ask_rules(flag, procedure, excerpts)
 
     citations = verified_citations(decision, excerpts)

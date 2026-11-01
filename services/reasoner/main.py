@@ -127,7 +127,7 @@ def store(flag: Flag, verdict: Verdict) -> None:
 
 
 def step_query(procedure: Procedure, step_id: str) -> str:
-    return f"{procedure.step(step_id).title}: rules, exceptions and rework"
+    return f"{procedure.step(step_id).title}: order of work, published step order, exceptions and rework"
 
 
 def warm_queries(procedure: Procedure) -> None:

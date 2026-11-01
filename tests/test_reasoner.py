@@ -54,6 +54,12 @@ def test_rev_b_note_still_clears_a_rev_b_unit():
     assert verdict.status == "cleared" and verdict.model == "m"
 
 
+def test_order_check_is_never_left_unsure():
+    unsure = lambda prompt, frames: Decision("uncertain", "The excerpts do not say.", [], "", "m")
+    assert judge(flag("A"), PROCEDURE, EXCERPTS, [], [], ask=unsure).status == "confirmed"
+    assert judge(flag("B"), PROCEDURE, EXCERPTS, [], [], ask=unsure).status == "cleared"
+
+
 def test_rules_cannot_pass_a_photo_check():
     decision = ask_rules(flag(reason="step_check", expected="S3", actual=None), PROCEDURE, EXCERPTS)
     assert decision.status == "uncertain"

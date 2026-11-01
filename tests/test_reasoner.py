@@ -84,9 +84,16 @@ def test_empty_quote_is_rejected():
     assert verified_citations(decision, EXCERPTS) is None
 
 
-def test_invented_quote_downgrades_to_uncertain():
+def test_invented_quote_on_a_photo_check_downgrades_to_uncertain():
     fake = lambda prompt, frames: Decision("cleared", "fine", [{"section": "4.3", "quote": "Notch B is approved for all cables."}], "", "m")
-    verdict = judge(flag(), PROCEDURE, EXCERPTS, [], [], ask=fake)
+    verdict = judge(flag(reason="step_check", expected="S3", actual=None), PROCEDURE, EXCERPTS, [], [b"jpg"], ask=fake)
+    assert verdict.status == "uncertain"
+    assert verdict.citations == []
+
+
+def test_invented_quote_can_never_clear_an_order_fault():
+    fake = lambda prompt, frames: Decision("cleared", "fine", [{"section": "4.3", "quote": "Rev A units may skip anything."}], "", "m")
+    verdict = judge(flag("A"), PROCEDURE, EXCERPTS, [], [], ask=fake)
     assert verdict.status == "uncertain"
     assert verdict.citations == []
 

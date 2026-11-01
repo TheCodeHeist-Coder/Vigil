@@ -95,7 +95,8 @@ class Hub:
                 last_track = time.time()
             body = json.loads(msg.value())
             if topic == RUN_STATE:
-                self.last_state = body
+                # Only a run in progress is shown to a new screen, so an old result never lingers.
+                self.last_state = None if body.get("finished") else body
             text = json.dumps({"topic": topic, "body": body, "received": time.time()})
             asyncio.run_coroutine_threadsafe(self._broadcast(text), self.loop)
 

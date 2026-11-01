@@ -163,6 +163,18 @@ async def stop_run(bench: str = settings.bench_id) -> dict:
     return {"ok": True}
 
 
+@app.post("/api/runs/recheck")
+def recheck_run(bench: str = settings.bench_id) -> dict:
+    control(RunControl(kind="recheck", bench=bench))
+    return {"ok": True}
+
+
+@app.post("/api/runs/release")
+def release_run(bench: str = settings.bench_id) -> dict:
+    control(RunControl(kind="release", bench=bench))
+    return {"ok": True}
+
+
 @app.get("/api/procedure")
 def get_procedure() -> dict:
     return json.loads(PROCEDURE.read_text())
@@ -261,7 +273,7 @@ def log() -> dict:
 def results() -> dict:
     """The numbers for the pitch: live verdicts only, so replay can never inflate them."""
     with connect() as db:
-        rows = db.execute("SELECT status, reason, latency_ms, model FROM verdicts WHERE source = 'live' AND model <> 'local-rules'").fetchall()
+        rows = db.execute("SELECT status, reason, latency_ms, model FROM verdicts WHERE source = 'live' AND model NOT IN ('local-rules', 'supervisor')").fetchall()
         runs = db.execute("SELECT count(*) FROM runs").fetchone()[0]
     latencies = [row[2] for row in rows if row[2]]
     counts: dict[str, int] = {}

@@ -136,6 +136,17 @@ def warm_queries(procedure: Procedure) -> None:
 
 
 def decide(flag: Flag, procedure: Procedure, context: AgentContext, frames: FrameReader) -> Verdict:
+    if flag.reason == "supervisor_release":
+        return Verdict(
+            flag_id=flag.id,
+            bench=flag.bench,
+            run_id=flag.run_id,
+            step_id=flag.expected_step,
+            reason=flag.reason,
+            status="cleared",
+            explanation="A supervisor released this step after looking at the unit.",
+            model="supervisor",
+        )
     if settings.replay:
         saved = saved_verdict(flag)
         if saved:

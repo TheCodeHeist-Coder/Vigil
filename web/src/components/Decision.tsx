@@ -1,6 +1,7 @@
 import type { Incident, Verdict } from "../types";
 
 function heading(verdict: Verdict): string {
+  if (verdict.reason === "supervisor_release") return "Released by a supervisor";
   if (verdict.reason === "step_check") {
     return { confirmed: "Step failed its photo check", cleared: "Step passed its photo check", uncertain: "Photo not checked" }[verdict.status];
   }
@@ -9,6 +10,7 @@ function heading(verdict: Verdict): string {
 
 function checkedBy(verdict: Verdict): string {
   if (verdict.model === "none") return "No photo available";
+  if (verdict.model === "supervisor") return "Decided by a person, not checked by AI";
   const who = verdict.model.startsWith("gemini") ? "Gemini" : "local rules";
   return `Checked by ${who} in ${(verdict.latency_ms / 1000).toFixed(1)} s`;
 }

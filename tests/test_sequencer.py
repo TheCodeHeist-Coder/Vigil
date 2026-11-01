@@ -124,6 +124,72 @@ def test_alert_names_the_earliest_missing_step():
     assert outputs[0].expected == "S3" and outputs[0].actual == "S5"
 
 
+def stopped(run: logic.Run) -> None:
+    logic.on_pick(run, PROCEDURE, "B")
+    logic.on_verdict(run, PROCEDURE, verdict(run, "out_of_sequence", "confirmed", "S1"))
+
+
+def test_hands_clear_after_a_stop_looks_at_the_fix():
+    run = logic.Run("r")
+    stopped(run)
+    outputs = logic.on_hands_clear(run)
+    assert isinstance(outputs[0], logic.Recheck) and outputs[0].step_id == "S1"
+
+
+def test_a_passing_recheck_clears_the_stop_with_no_bin_visit():
+    run = logic.Run("r")
+    stopped(run)
+    logic.request_recheck(run)
+    logic.on_verdict(run, PROCEDURE, verdict(run, "step_check", "cleared", "S1"))
+    assert run.held is None and run.done == ["S1"]
+    assert logic.on_pick(run, PROCEDURE, "B") == [] and run.active == "S2"
+
+
+def test_a_failing_recheck_keeps_the_stop_and_can_be_tried_again():
+    run = logic.Run("r")
+    stopped(run)
+    logic.request_recheck(run)
+    logic.on_verdict(run, PROCEDURE, verdict(run, "step_check", "confirmed", "S1"))
+    assert run.held == ("S1", "S2") and run.rechecking is None
+    logic.on_verdict(run, PROCEDURE, verdict(run, "step_check", "uncertain", "S1"))
+    assert isinstance(logic.request_recheck(run)[0], logic.Recheck)
+
+
+def test_no_recheck_before_the_first_verdict():
+    run = logic.Run("r")
+    logic.on_pick(run, PROCEDURE, "B")
+    assert logic.request_recheck(run) == []
+
+
+def test_only_one_recheck_at_a_time():
+    run = logic.Run("r")
+    stopped(run)
+    assert len(logic.request_recheck(run)) == 1
+    assert logic.request_recheck(run) == []
+
+
+def test_failed_photo_check_can_be_fixed_by_a_recheck():
+    run = logic.Run("r")
+    for zone in "ABC":
+        do_step(run, zone)
+    logic.on_verdict(run, PROCEDURE, verdict(run, "step_check", "confirmed", "S3"))
+    assert logic.blocking_step(run) == "S3"
+    logic.request_recheck(run)
+    logic.on_verdict(run, PROCEDURE, verdict(run, "step_check", "cleared", "S3"))
+    assert run.done == ["S1", "S2", "S3"] and run.failed is None
+
+
+def test_supervisor_release_ends_the_stop():
+    run = logic.Run("r")
+    stopped(run)
+    logic.on_verdict(run, PROCEDURE, verdict(run, "supervisor_release", "cleared", "S1"))
+    assert run.held is None and run.done == ["S1"]
+
+
+def test_nothing_to_recheck_on_a_healthy_run():
+    assert logic.request_recheck(logic.Run("r")) == []
+
+
 def test_inside_polygon():
     tray = next(z for z in ZONES if z.kind == "tray")
     assert inside(TRAY, tray.polygon)

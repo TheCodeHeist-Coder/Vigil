@@ -162,6 +162,8 @@ button.ghost:hover:not(:disabled) { background: var(--sunken); border-color: var
 .banner.good { background: var(--good-soft); border-color: #a9e0c9; }
 .banner.good .banner-icon { background: var(--good); color: #fff; }
 .banner.good .eyebrow { color: var(--good); }
+.banner-actions { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.banner-actions:empty { display: none; }
 .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--sunken); }
 .progress span { display: block; height: 100%; background: var(--primary); transition: width 0.3s; }
 .banner.stop .progress, .banner.hold .progress { background: rgba(0, 0, 0, 0.15); }
@@ -261,7 +263,8 @@ button.primary { padding: 12px; font-size: 16px; }
   .banner-icon { width: 42px; height: 42px; }
   .banner h1 { font-size: 21px; }
   .banner.stop h1 { font-size: 24px; }
-  .end-run { width: 100%; order: 3; }
+  .banner-actions { width: 100%; justify-content: stretch; order: 3; }
+  .banner-actions button { flex: 1; }
   .setup-bar { flex-wrap: wrap; }
 }
 

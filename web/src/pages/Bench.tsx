@@ -21,6 +21,8 @@ function speakVerdict(verdict: Verdict) {
   }
 }
 
+const LOOK_TIMEOUT_MS = 12000;
+
 function nextSerial(serial: string): string {
   return serial.replace(/(\d+)$/, (digits) => String(Number(digits) + 1).padStart(digits.length, "0"));
 }
@@ -29,19 +31,29 @@ export function Bench({ status }: { status: Status | null }) {
   const [procedure, setProcedure] = useState<Procedure | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [setup, setSetup] = useState(false);
+  const [looking, setLooking] = useState(false);
 
   const live = useLive({
     onAlert: (alert) => {
       beep();
       say(alert.text, alert.clip);
     },
-    onVerdict: speakVerdict,
+    onVerdict: (verdict) => {
+      setLooking(false);
+      speakVerdict(verdict);
+    },
   });
 
   useEffect(() => {
     void get<Procedure>("/api/procedure").then(setProcedure);
     void get<Zone[]>("/api/zones").then(setZones);
   }, []);
+
+  function checkAgain() {
+    setLooking(true);
+    void post("/api/runs/recheck", {});
+    setTimeout(() => setLooking(false), LOOK_TIMEOUT_MS); // never leave the button stuck
+  }
 
   async function start(serial: string, revision: "A" | "B", photoChecks: boolean) {
     unlockSound();
@@ -63,7 +75,14 @@ export function Bench({ status }: { status: Status | null }) {
 
   return (
     <main className="bench">
-      <Banner view={view} progress={progress} onEnd={running ? () => void post("/api/runs/stop", {}) : undefined} />
+      <Banner
+        view={view}
+        progress={progress}
+        looking={looking}
+        onEnd={running ? () => void post("/api/runs/stop", {}) : undefined}
+        onCheck={running ? checkAgain : undefined}
+        onRelease={running ? () => void post("/api/runs/release", {}) : undefined}
+      />
       <div className="bench-grid">
         <div className="bench-main">
           <Stage zones={zones} onZones={setZones} track={live.track} targetBin={targetBin} cameraLive={status?.camera_live ?? false} setup={setup} onSetup={setSetup} />

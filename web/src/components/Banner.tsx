@@ -10,6 +10,7 @@ export type BannerView = {
   title: string;
   detail?: string;
   checking?: boolean;
+  canFix?: boolean; // the operator can ask for a new look, or a supervisor can release it
 };
 
 export function nextStep(procedure: Procedure | null, live: Live): Step | null {
@@ -28,13 +29,16 @@ export function bannerFor(procedure: Procedure | null, live: Live): BannerView {
 
   if (state.held && alert) {
     const decided = verdict?.flag_id === alert.flag_id ? verdict : null;
-    if (decided?.status === "uncertain") return { tone: "hold", eyebrow: "Hold", title: "Stop and call a supervisor", detail: "Vigil could not confirm this from the manual." };
-    if (decided?.status === "confirmed") return { tone: "stop", eyebrow: "Stop", title: alert.text.replace(/^Stop\.\s*/, ""), detail: decided.explanation };
+    if (verdict?.reason === "step_check" && verdict.step_id === alert.step_id) {
+      return { tone: "stop", eyebrow: "Stop", title: alert.text.replace(/^Stop\.\s*/, ""), detail: `Not fixed yet. ${verdict.explanation}`, canFix: true };
+    }
+    if (decided?.status === "uncertain") return { tone: "hold", eyebrow: "Hold", title: "Stop and call a supervisor", detail: "Vigil could not confirm this from the manual.", canFix: true };
+    if (decided?.status === "confirmed") return { tone: "stop", eyebrow: "Stop", title: alert.text.replace(/^Stop\.\s*/, ""), detail: `${decided.explanation} Fix it, move your hands away, and Vigil will look again.`, canFix: true };
     return { tone: "stop", eyebrow: "Stop", title: alert.text.replace(/^Stop\.\s*/, ""), detail: "Checking the manual", checking: true };
   }
 
   if (verdict?.reason === "step_check" && verdict.status === "confirmed" && !state.done.includes(verdict.step_id)) {
-    return { tone: "stop", eyebrow: "Stop", title: verdict.spoken ?? "Redo this step", detail: verdict.explanation };
+    return { tone: "stop", eyebrow: "Stop", title: verdict.spoken ?? "Redo this step", detail: verdict.explanation, canFix: true };
   }
 
   const step = nextStep(procedure, live);
@@ -48,7 +52,16 @@ export function bannerFor(procedure: Procedure | null, live: Live): BannerView {
 
 const ICONS = { idle: "bench", now: "arrow", stop: "stop", hold: "alert", good: "check" } as const;
 
-export function Banner({ view, progress, onEnd }: { view: BannerView; progress: number | null; onEnd?: () => void }) {
+type Props = {
+  view: BannerView;
+  progress: number | null;
+  onEnd?: () => void;
+  onCheck?: () => void;
+  onRelease?: () => void;
+  looking?: boolean;
+};
+
+export function Banner({ view, progress, onEnd, onCheck, onRelease, looking }: Props) {
   return (
     <section className={`banner ${view.tone}`} role={view.tone === "stop" || view.tone === "hold" ? "alert" : "status"}>
       <span className="banner-icon">
@@ -64,11 +77,23 @@ export function Banner({ view, progress, onEnd }: { view: BannerView; progress: 
           </p>
         )}
       </div>
-      {onEnd && (
-        <button className="ghost end-run" onClick={onEnd}>
-          End run
-        </button>
-      )}
+      <div className="banner-actions">
+        {view.canFix && onCheck && (
+          <button className="ghost" disabled={looking} onClick={onCheck}>
+            {looking ? "Looking at the bench" : "Check again"}
+          </button>
+        )}
+        {view.canFix && onRelease && (
+          <button className="ghost" onClick={onRelease}>
+            Supervisor release
+          </button>
+        )}
+        {onEnd && (
+          <button className="ghost" onClick={onEnd}>
+            End run
+          </button>
+        )}
+      </div>
       {progress !== null && (
         <span className="progress" aria-hidden="true">
           <span style={{ width: `${progress * 100}%` }} />

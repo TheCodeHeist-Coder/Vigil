@@ -87,7 +87,7 @@ function ResultsTab({ results, log }: { results: Results | null; log: Log }) {
                       <small>Rev {row.revision}</small>
                     </td>
                     <td>{row.step}</td>
-                    <td>{row.reason === "out_of_sequence" ? "Order" : "Photo"}</td>
+                    <td>{row.reason === "out_of_sequence" ? "Order" : row.reason === "supervisor_release" ? "Release" : "Photo"}</td>
                     <td>
                       <span className={`pill ${row.status}`}>{RESULT[row.status]}</span>
                       {row.source === "replay" && <span className="replay-tag">REPLAY</span>}

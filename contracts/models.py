@@ -74,7 +74,7 @@ class Flag(BaseModel):
     bench: str
     run_id: str
     event: BenchEvent
-    reason: Literal["out_of_sequence", "step_check"]
+    reason: Literal["out_of_sequence", "step_check", "supervisor_release"]
     expected_step: str
     actual_step: str | None = None
     unit_revision: Literal["A", "B"] = "A"
@@ -117,7 +117,7 @@ class Incident(BaseModel):
 
 
 class RunControl(BaseModel):
-    kind: Literal["start", "stop", "zones", "procedure"]
+    kind: Literal["start", "stop", "zones", "procedure", "recheck", "release"]
     bench: str
     run_id: str | None = None
     serial: str | None = None

@@ -84,6 +84,30 @@ class Sequencer:
             bench.tracker = ZoneTracker(bench.zones)
         elif control.kind == "procedure" and control.procedure:
             self.procedure = bench.procedure = control.procedure
+        elif control.kind == "recheck" and bench.run:
+            self.send_rechecks(bench, logic.request_recheck(bench.run))
+            self.publish_state(bench)
+        elif control.kind == "release" and bench.run:
+            step_id = logic.blocking_step(bench.run)
+            if step_id:
+                self.flag(bench, self.bench_event(bench), "supervisor_release", step_id, None, [])
+
+    def bench_event(self, bench: Bench) -> BenchEvent:
+        return BenchEvent(
+            id=str(uuid.uuid4()),
+            bench=bench.id,
+            run_id=bench.run.run_id,
+            kind="hands_clear",
+            zone="TRAY",
+            frame_offset=bench.history[-1][1] if bench.history else 0,
+            times=stamp({"t_ingest": time.time()}, "sequencer"),
+        )
+
+    def send_rechecks(self, bench: Bench, outputs: list) -> None:
+        for output in outputs:
+            if isinstance(output, logic.Recheck):
+                event = self.bench_event(bench)
+                self.flag(bench, event, "step_check", output.step_id, None, [event.frame_offset])
 
     def on_verdict(self, verdict: Verdict) -> None:
         bench = self.bench(verdict.bench)
@@ -160,7 +184,9 @@ class Sequencer:
                 outputs = logic.on_hands_clear(run)
 
             for output in outputs:
-                if isinstance(output, logic.OutOfSequence):
+                if isinstance(output, logic.Recheck):
+                    self.send_rechecks(bench, [output])
+                elif isinstance(output, logic.OutOfSequence):
                     flag_id = self.flag(
                         bench, event, "out_of_sequence", output.expected, output.actual, self.evidence(bench, event)
                     )

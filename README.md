@@ -1,8 +1,28 @@
 # Vigil
 
-Vigil watches an assembly bench and stops a wrong step as it happens. A local rule raises the alert straight away, then Gemini confirms or clears it with a citation from the manual.
+Electronics, aerospace and medical device makers still rely on skilled people assembling
+products by hand from long engineering manuals. A missed bolt or a step done out of
+order can leave no visible sign, and the product can look perfect when it ships.
 
-Built for hackCBS 9.0. The demo assembles a real STM32 and OLED display node from a 10 page manual, on a bench, not in a real factory.
+## Full problem statement.
+Technicians follow complex procedures by hand, and a single
+procedural error can become a recall or a safety failure. Existing vision systems judge one
+image at a time, so they cannot tell whether steps happened in the right order, or whether
+a variation is allowed for this unit. Manufacturers need a system that watches the work as
+it happens, understands the manual, and steps in before the mistake is sealed inside the
+product
+
+## Solution :-
+
+Vigil is an AI supervisor for the assembly bench that knows the manual, watches each step, and speaks up the moment one goes wrong.
+
+Here is how it works for the people using it:
+1. An engineer loads the manual. Vigil reads the steps out of it, and the engineer approves them before anything reaches the bench.
+2. The operator is guided. A screen always shows the next action, such as "Step 2 of 5, take the part from Bin B", and that bin glows on the live video.
+3. A mistake gets an instant stop. If a hand reaches for the wrong part, the operator hears the correction and feels a vibration, with no wait for the cloud.
+4. The manual decides. Gemini checks the event against the manual, then confirms the mistake or clears it, and quotes the exact section and page.
+5. The fix is written down. A confirmed mistake creates an incident record with the rework steps, and that memory carries into later runs
+
 
 ## How it works
 

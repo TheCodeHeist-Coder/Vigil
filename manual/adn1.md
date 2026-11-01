@@ -1,13 +1,14 @@
 <!-- page 1 -->
 # ADN-1 Display Node Assembly Manual
 
-Document ADN-1-AM, revision 1. The ADN-1 is a demonstration product built from real parts: an Arduino Uno, or a compatible clone, driving an OLED display over I2C.
+Document ADN-1-AM, revision 2. The ADN-1 is a demonstration product built from real parts: an Arduino Uno, or a compatible clone, wired to an OLED display on a breadboard with jumper wires.
 
 | Revision | Change |
 | --- | --- |
 | 1 | First release, covering unit Rev A and unit Rev B |
+| 2 | Limited to the four parts in the parts list |
 
-Read chapter 4 at the bench. Chapters 3, 5 and 6 hold the wiring, the values and the rules that chapter 4 depends on.
+Read chapter 4 at the bench. Chapters 3, 5 and 6 hold the wiring, the parts and the rules that chapter 4 depends on.
 
 <!-- page 2 -->
 ## 1 Scope
@@ -27,9 +28,9 @@ Steps must be done in the published order unless a note in this manual allows ot
 <!-- page 3 -->
 ## 2 Safety and handling
 
-### 2.1 Power off while wiring
+### 2.1 Assembled unpowered
 
-Never change a wire while the board has power. All wiring must be complete before the USB cable is connected, because a loose wire on a live board can short power to GND and damage the Arduino or the display.
+The ADN-1 is assembled with no power connected. Do not connect any power to the Arduino at this bench.
 
 ### 2.2 Electrostatic protection
 
@@ -40,26 +41,24 @@ Hold the boards by their edges. Do not touch the display glass or the header pin
 Stop work when the system calls a hold, when a part is damaged, or when a check fails. Do not continue until the fault is corrected or a supervisor releases the unit.
 
 <!-- page 4 -->
-## 3 Parts, tools and specifications
+## 3 Parts and specifications
 
 ### 3.1 Parts list
 
 | Item | Part | Bin | Quantity |
 | --- | --- | --- | --- |
-| 1 | Arduino Uno | A | 1 |
+| 1 | Arduino Uno or compatible clone | A | 1 |
 | 2 | OLED display, 0.96 inch, I2C, 4 pin | B | 1 |
-| 3 | Power wires, red and black | C | 2 |
-| 4 | Signal wires, yellow and blue | D | 2 |
-| 5 | USB cable | E | 1 |
+| 3 | Jumper wires | C | 4 |
 
-The breadboard stays in its marked position on the bench and is not a bin item.
+The breadboard stays in its marked position on the bench and is not a bin item. No tools are needed.
 
-### 3.2 Tools
+### 3.2 Jumper wires
 
-No tools are needed. Use a bright light over the bench, so the wires can be seen clearly.
+Any colour of jumper wire can be used. Four wires are needed in total: two for power and two for signals.
 
 <!-- page 5 -->
-### 3.3 Electrical specifications
+### 3.3 Display specifications
 
 | Item | Value |
 | --- | --- |
@@ -67,18 +66,17 @@ No tools are needed. Use a bright light over the bench, so the wires can be seen
 | Display controller | SSD1306, 128 by 64 pixels |
 | Display I2C address | 0x3C |
 | Arduino I2C pins | A4 is SDA, A5 is SCL |
-| Board power | USB, 5V |
 
 ### 3.4 Wiring table
 
-| Wire | Colour | Arduino pin | Display pin |
+| Wire | Purpose | Arduino pin | Display pin |
 | --- | --- | --- | --- |
-| W1 | Red | 3.3V | VCC |
-| W2 | Black | GND | GND |
-| W3 | Yellow | A5 | SCL |
-| W4 | Blue | A4 | SDA |
+| W1 | Power | 3.3V | VCC |
+| W2 | Power | GND | GND |
+| W3 | Signal | A5 | SCL |
+| W4 | Signal | A4 | SDA |
 
-Display pin order differs between makers, so always read the labels printed on the display. A reversed VCC and GND can destroy the display.
+Display pin order differs between makers, so always read the labels printed on the display. Each wire runs from the Arduino header to the breadboard row of the matching display pin.
 
 <!-- page 6 -->
 ## 4 Assembly procedure
@@ -98,15 +96,11 @@ Note 4.2: Rev B units ship with the display already fitted. On a Rev B unit, ski
 <!-- page 7 -->
 ### 4.3 Connect the two power wires
 
-Take the red and black wires from bin C. Connect the red wire from the 3.3V pin to VCC, and the black wire from GND to GND. The display must already be seated on Rev A units, because its pins set where these wires go.
+Take two jumper wires from bin C. Connect one from the 3.3V pin to the VCC row, and one from GND to the GND row. The display must already be seated on Rev A units, because its pins set where these wires go.
 
 ### 4.4 Connect the two signal wires
 
-Take the yellow and blue wires from bin D. Connect the yellow wire from A5 to SCL, and the blue wire from A4 to SDA. Four wires must now run between the Arduino and the display.
-
-### 4.5 Plug in the USB cable last
-
-Take the USB cable from bin E. Plug it into the Arduino only after all four wires are connected. The USB cable must never be connected before the wiring is finished.
+Take two jumper wires from bin C. Connect one from A5 to the SCL row, and one from A4 to the SDA row. Four jumper wires must now run between the Arduino and the breadboard.
 
 <!-- page 8 -->
 ## 5 Inspection
@@ -117,22 +111,22 @@ Check each step before starting the next one, with hands clear of the bench. A s
 
 ### 5.2 Final inspection
 
-A finished unit shows the Arduino beside the breadboard, the display seated, four wires between them, and the USB cable connected to the Arduino.
+A finished unit shows the Arduino beside the breadboard, the display seated, and four jumper wires between the Arduino and the breadboard.
 
 ### 5.3 Acceptance criteria
 
-Reject a unit if fewer than four wires are connected, if a wire is in the wrong pin, if the display is missing on Rev A, or if the USB cable was connected before the wiring was finished.
+Reject a unit if fewer than four wires are connected, if a wire is in the wrong pin, or if the display is missing.
 
 <!-- page 9 -->
 ## 6 Rework
 
 ### 6.1 Sequence errors
 
-If a step is done out of order, disconnect the USB cable first if it is connected. Then remove every part fitted after the missed step, complete the missed step, and continue in order.
+If a step is done out of order, remove every part fitted after the missed step, complete the missed step, and continue in order.
 
 ### 6.2 Wiring errors
 
-If a wire is missing or in the wrong pin, disconnect the USB cable, correct the wire against the wiring table in section 3.4, and inspect the unit again.
+If a wire is missing or in the wrong pin, correct the wire against the wiring table in section 3.4, and inspect the unit again.
 
 ### 6.3 Damaged parts
 

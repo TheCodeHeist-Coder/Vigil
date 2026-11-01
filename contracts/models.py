@@ -28,9 +28,6 @@ class Procedure(BaseModel):
     def step(self, step_id: str) -> Step | None:
         return next((s for s in self.steps if s.id == step_id), None)
 
-    def step_for_bin(self, zone: str) -> Step | None:
-        return next((s for s in self.steps if s.bin == zone), None)
-
 
 class Zone(BaseModel):
     id: str

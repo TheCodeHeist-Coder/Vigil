@@ -85,7 +85,7 @@ export function Bench({ status }: { status: Status | null }) {
       />
       <div className="bench-grid">
         <div className="bench-main">
-          <Stage zones={zones} onZones={setZones} track={live.track} targetBin={targetBin} cameraLive={status?.camera_live ?? false} setup={setup} onSetup={setSetup} />
+          <Stage zones={zones} bins={procedure?.steps.map((s) => s.bin) ?? []} onZones={setZones} track={live.track} targetBin={targetBin} cameraLive={status?.camera_live ?? false} setup={setup} onSetup={setSetup} />
           {running && <Speed live={live} />}
         </div>
         <aside className="bench-side">

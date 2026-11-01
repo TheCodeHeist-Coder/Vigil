@@ -40,14 +40,26 @@ class StepFinished:
 Output = OutOfSequence | StepFinished
 
 
+def earliest_missing(run: Run, procedure: Procedure, step_id: str) -> str | None:
+    """Walks back through the requirements, so the alert names the first step to do now."""
+    found = None
+    waiting = list(procedure.step(step_id).requires)
+    while waiting:
+        current = waiting.pop()
+        if not run.complete(current):
+            found = current
+        waiting += procedure.step(current).requires
+    return found
+
+
 def on_pick(run: Run, procedure: Procedure, zone: str) -> list[Output]:
     step = procedure.step_for_bin(zone)
     if step is None or run.complete(step.id):
         return []
 
-    missing = [r for r in step.requires if not run.complete(r)]
+    missing = earliest_missing(run, procedure, step.id)
     if missing:
-        expected = procedure.step(missing[0])
+        expected = procedure.step(missing)
         pair = (expected.id, step.id)
         if run.held == pair or run.awaiting_verdict:
             return []  # one flag at a time, and a hand re-entering the bin must not repeat it

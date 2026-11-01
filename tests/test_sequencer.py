@@ -106,7 +106,7 @@ def test_new_error_can_flag_once_the_verdict_is_in():
     logic.on_pick(run, PROCEDURE, "B")
     logic.on_verdict(run, PROCEDURE, verdict(run, "out_of_sequence", "confirmed", "S1"))
     outputs = logic.on_pick(run, PROCEDURE, "C")
-    assert outputs[0].expected == "S2" and outputs[0].actual == "S3"
+    assert outputs[0].expected == "S1" and outputs[0].actual == "S3"
 
 
 def test_hand_test_run_still_finishes_every_step():
@@ -114,6 +114,14 @@ def test_hand_test_run_still_finishes_every_step():
     for zone in "ABCDE":
         do_step(run, zone)
     assert logic.finished(run, PROCEDURE)
+
+
+def test_alert_names_the_earliest_missing_step():
+    run = logic.Run("r")
+    do_step(run, "A")
+    do_step(run, "B")
+    outputs = logic.on_pick(run, PROCEDURE, "E")
+    assert outputs[0].expected == "S3" and outputs[0].actual == "S5"
 
 
 def test_inside_polygon():

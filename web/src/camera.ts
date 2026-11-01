@@ -6,6 +6,13 @@ export type Link = { tone: "idle" | "busy" | "live" | "bad"; label: string; deta
 type Camera = { link: Link; size: string; devices: MediaDeviceInfo[]; stream: MediaStream | null };
 
 const RETRY_MS = 1500;
+const FRAME_RATE = 15; // hand tracking runs near this, so more would only waste bitrate
+
+// Chrome starts low and rarely climbs on a phone link, which shrank real video to 180p.
+// A floor keeps it big enough to find hands and to read the notch labels.
+const START_KBPS = 1200;
+const MIN_KBPS = 600;
+const MAX_KBPS = 2500;
 const IDLE: Link = { tone: "idle", label: "Not streaming" };
 
 // The camera lives here, outside any page, so moving between pages never stops it.
@@ -24,6 +31,16 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+function withBitrateFloor(sdp: string): string {
+  const settings = `x-google-start-bitrate=${START_KBPS};x-google-min-bitrate=${MIN_KBPS};x-google-max-bitrate=${MAX_KBPS}`;
+  const codecs = [...sdp.matchAll(/^a=rtpmap:(\d+) (?:VP8|H264)\/90000/gm)].map((match) => match[1]);
+  return codecs.reduce((text, payload) => {
+    const parameters = new RegExp(`^a=fmtp:${payload} (.*)$`, "m");
+    if (parameters.test(text)) return text.replace(parameters, `a=fmtp:${payload} $1;${settings}`);
+    return text.replace(new RegExp(`^(a=rtpmap:${payload} .*)$`, "m"), `$1\r\na=fmtp:${payload} ${settings}`);
+  }, sdp);
+}
+
 function cameraError(error: unknown): Link {
   const name = error instanceof DOMException ? error.name : "";
   if (name === "NotAllowedError") return { tone: "bad", label: "Camera blocked", detail: "Allow the camera in your browser's site settings, then try again." };
@@ -38,8 +55,8 @@ async function connect() {
   const pc = new RTCPeerConnection({ iceServers: [] });
   peer = pc;
   stream.getVideoTracks().forEach((track) => {
-    // On a slow link, keep the motion and lower the resolution. Protecting resolution
-    // dropped a real phone to 1 fps, which is too few frames to see a hand enter a bin.
+    // Protecting resolution dropped a real phone to 1 fps, which is too few frames
+    // to see a hand enter a bin, so motion comes first and the bitrate floor protects size.
     track.contentHint = "motion";
     pc.addTrack(track, stream);
   });
@@ -62,7 +79,7 @@ async function connect() {
 
   try {
     const answer = await post<RTCSessionDescriptionInit>("/webrtc/offer", { sdp: pc.localDescription!.sdp, type: pc.localDescription!.type });
-    await pc.setRemoteDescription(answer);
+    await pc.setRemoteDescription({ type: answer.type, sdp: withBitrateFloor(answer.sdp ?? "") });
   } catch {
     retry();
   }
@@ -78,7 +95,7 @@ export async function startCamera(device: string) {
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 }, deviceId: device ? { exact: device } : undefined, facingMode: device ? undefined : "environment" },
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: FRAME_RATE }, deviceId: device ? { exact: device } : undefined, facingMode: device ? undefined : "environment" },
       audio: false,
     });
   } catch (error) {

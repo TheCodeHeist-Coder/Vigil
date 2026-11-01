@@ -12,6 +12,7 @@ class Step(BaseModel):
     section: str  # "4.3"
     title: str
     bin: str  # zone the part comes from
+    part: str = ""  # short name of what is in that bin, shown on the video
     requires: list[str] = Field(default_factory=list)  # steps that must be done first
     check: str  # what a hands-clear frame must show
     correction: str  # "Stop. Connect the power wires first."
@@ -26,9 +27,6 @@ class Procedure(BaseModel):
 
     def step(self, step_id: str) -> Step | None:
         return next((s for s in self.steps if s.id == step_id), None)
-
-    def step_for_bin(self, zone: str) -> Step | None:
-        return next((s for s in self.steps if s.bin == zone), None)
 
 
 class Zone(BaseModel):

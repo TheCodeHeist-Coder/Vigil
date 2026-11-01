@@ -3,6 +3,7 @@ import json
 from common.config import ROOT
 from contracts.models import Procedure, Verdict, Zone
 from services.sequencer import logic
+from services.sequencer.main import in_use
 from services.sequencer.zones import ZoneTracker, inside
 
 PROCEDURE = Procedure(**json.loads((ROOT / "tests" / "fixtures" / "procedure.json").read_text()))
@@ -188,6 +189,61 @@ def test_supervisor_release_ends_the_stop():
 
 def test_nothing_to_recheck_on_a_healthy_run():
     assert logic.request_recheck(logic.Run("r")) == []
+
+
+def shared_bin_procedure() -> Procedure:
+    def step(number: int, bin_id: str) -> dict:
+        requires = [f"S{number - 1}"] if number > 1 else []
+        return dict(id=f"S{number}", section=f"4.{number}", title=f"Step {number}", bin=bin_id, requires=requires, check="c", correction=f"Do {number}.")
+
+    return Procedure(steps=[step(1, "A"), step(2, "B"), step(3, "C"), step(4, "C")])
+
+
+def test_two_steps_can_share_one_bin():
+    procedure = shared_bin_procedure()
+    run = logic.Run("r")
+    for zone in "ABCC":
+        logic.on_pick(run, procedure, zone)
+        logic.on_place(run)
+        logic.on_hands_clear(run)
+    assert run.done == ["S1", "S2", "S3", "S4"] and logic.finished(run, procedure)
+
+
+def test_going_back_to_a_shared_bin_stays_on_the_same_step():
+    procedure = shared_bin_procedure()
+    run = logic.Run("r")
+    for zone in "AB":
+        logic.on_pick(run, procedure, zone)
+        logic.on_place(run)
+        logic.on_hands_clear(run)
+    logic.on_pick(run, procedure, "C")
+    logic.on_pick(run, procedure, "C")
+    assert run.active == "S3" and run.held is None
+
+
+def test_wires_before_the_display_is_flagged_on_a_shared_bin():
+    procedure = shared_bin_procedure()
+    run = logic.Run("r")
+    logic.on_pick(run, procedure, "A")
+    logic.on_place(run)
+    logic.on_hands_clear(run)
+    outputs = logic.on_pick(run, procedure, "C")
+    assert outputs[0].expected == "S2" and outputs[0].actual == "S3"
+
+
+def test_a_hand_sweeping_across_a_bin_is_not_a_pick():
+    tracker = ZoneTracker(ZONES)
+    assert tracker.update([BIN_A], 0.0) == []
+    assert tracker.update([REST], 0.07) == []
+    assert tracker.update([REST], 0.14) == []
+    assert tracker.update([REST], 0.21) == []
+    assert tracker.update([REST], 0.5) == []
+
+
+def test_only_bins_in_the_manual_can_fire():
+    procedure = Procedure(steps=[PROCEDURE.steps[0]])
+    used = [zone.id for zone in in_use(ZONES, procedure)]
+    assert "A" in used and "TRAY" in used and "D" not in used
 
 
 def test_inside_polygon():

@@ -175,6 +175,11 @@ def judge(flag: Flag, procedure: Procedure, excerpts: list[Excerpt], notes: list
         decision = ask_rules(flag, procedure, excerpts)
 
     citations = verified_citations(decision, excerpts)
+    if flag.reason == "out_of_sequence" and decision.status != "uncertain" and not citations:
+        # A bad quote means the rules decide, because an order check must never be left unsure.
+        print(f"order check settled by rules, citation failed: {decision.explanation[:120]}", flush=True)
+        decision = ask_rules(flag, procedure, excerpts)
+        citations = verified_citations(decision, excerpts)
     status, explanation, spoken = decision.status, decision.explanation, decision.spoken
     if status != "uncertain" and not citations:
         # A verdict that cannot quote the manual is not trusted, so the unit stays on hold.

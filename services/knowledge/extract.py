@@ -7,7 +7,9 @@ from contracts.models import Procedure
 
 SYSTEM = """You turn an assembly manual into a machine-readable procedure.
 Use only the manual text. Take each step from the numbered steps of the assembly chapter, in order.
+section is the step's own number, such as 4.2, never its chapter number.
 bin is the single bin letter named in the step or the parts list.
+part is a one or two word name for what is in that bin, such as "OLED" or "Power wires".
 requires holds the step that must come first. The first step has none.
 check says what a photo of the finished step must show.
 correction is a short spoken order naming this step's own action, said when an operator skipped this step.
@@ -28,11 +30,12 @@ SCHEMA = {
                     "section": {"type": "string"},
                     "title": {"type": "string"},
                     "bin": {"type": "string"},
+                    "part": {"type": "string"},
                     "requires": {"type": "array", "items": {"type": "string"}},
                     "check": {"type": "string"},
                     "correction": {"type": "string"},
                 },
-                "required": ["id", "section", "title", "bin", "requires", "check", "correction"],
+                "required": ["id", "section", "title", "bin", "part", "requires", "check", "correction"],
             },
         },
     },

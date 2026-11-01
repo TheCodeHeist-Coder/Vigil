@@ -100,14 +100,20 @@ def test_invented_quote_on_a_photo_check_downgrades_to_uncertain():
 def test_invented_quote_can_never_clear_an_order_fault():
     fake = lambda prompt, frames: Decision("cleared", "fine", [{"section": "4.3", "quote": "Rev A units may skip anything."}], "", "m")
     verdict = judge(flag("A"), PROCEDURE, EXCERPTS, [], [], ask=fake)
-    assert verdict.status == "uncertain"
-    assert verdict.citations == []
+    assert verdict.status == "confirmed" and verdict.model == "local-rules"
+    assert verdict.citations
 
 
-def test_verdict_with_no_citation_downgrades_to_uncertain():
+def test_photo_verdict_with_no_citation_downgrades_to_uncertain():
     fake = lambda prompt, frames: Decision("confirmed", "bad", [], "Stop.", "m")
-    verdict = judge(flag(), PROCEDURE, EXCERPTS, [], [], ask=fake)
+    verdict = judge(flag(reason="step_check", expected="S3", actual=None), PROCEDURE, EXCERPTS, [], [b"jpg"], ask=fake)
     assert verdict.status == "uncertain" and verdict.spoken is None
+
+
+def test_order_check_with_a_bad_quote_is_settled_by_rules():
+    fake = lambda prompt, frames: Decision("confirmed", "bad", [{"section": "4.1", "quote": "Not in the manual."}], "", "m")
+    verdict = judge(flag("A"), PROCEDURE, EXCERPTS, [], [], ask=fake)
+    assert verdict.status == "confirmed" and verdict.spoken == "Stop. Install the gasket first."
 
 
 def test_model_failure_falls_back_to_rules():

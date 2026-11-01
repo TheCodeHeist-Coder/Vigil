@@ -5,6 +5,7 @@ import { Icon } from "./Icon";
 
 type Props = {
   zones: Zone[];
+  bins: string[]; // the bins this manual uses
   onZones: (z: Zone[]) => void;
   track: HandTrack | null;
   targetBin: string | null;
@@ -20,14 +21,16 @@ const RETRY_MS = 500;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const QUIET = "rgba(255,255,255,.7)";
 
-export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onSetup }: Props) {
+export function Stage({ zones, bins, onZones, track, targetBin, cameraLive, setup, onSetup }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLImageElement>(null);
   const [ratio, setRatio] = useState(16 / 9);
   const [index, setIndex] = useState(0);
   const [drag, setDrag] = useState<{ start: Point; end: Point } | null>(null);
 
-  const current = setup ? zones[index] : null;
+  // A bin this manual does not use would only confuse, so it is neither drawn nor marked.
+  const inUse = zones.filter((zone) => zone.kind === "tray" || bins.includes(zone.id));
+  const current = setup ? inUse[index] : null;
 
   useEffect(() => {
     const element = canvas.current;
@@ -41,7 +44,7 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
     const X = (p: Point): Point => [p[0] * box.width, p[1] * box.height];
 
     // Boxes mean nothing without the bench behind them.
-    for (const zone of cameraLive ? zones : []) {
+    for (const zone of cameraLive ? inUse : []) {
       const on = zone.id === targetBin || zone.id === current?.id;
       const [x, y] = X(zone.polygon[0]);
       c.beginPath();
@@ -85,7 +88,7 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
       c.fillRect(x1, y1, x2 - x1, y2 - y1);
       c.strokeRect(x1, y1, x2 - x1, y2 - y1);
     }
-  }, [zones, track, targetBin, drag, current, cameraLive, ratio]);
+  }, [zones, bins, track, targetBin, drag, current, cameraLive, ratio]);
 
   useEffect(() => setIndex(0), [setup]);
 
@@ -140,7 +143,7 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
   }
 
   function advance() {
-    if (index + 1 >= zones.length) finishSetup();
+    if (index + 1 >= inUse.length) finishSetup();
     else setIndex(index + 1);
   }
 
@@ -197,7 +200,7 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
         <div className="setup-bar">
           <div>
             <span className="eyebrow">
-              Mark zone {index + 1} of {zones.length}
+              Mark zone {index + 1} of {inUse.length}
             </span>
             <b>Drag a box around {current.label}</b>
           </div>

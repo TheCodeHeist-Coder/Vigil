@@ -3,16 +3,29 @@
 import argparse
 from pathlib import Path
 
+from contracts.models import Procedure
 from services.knowledge.embed import backend
 from services.knowledge.extract import extract
-from services.knowledge.parse import hierarchy, read_pages
+from services.knowledge.parse import Section, hierarchy, read_pages
 from services.knowledge.store import approve, propose, save
+
+
+def align_sections(procedure: Procedure, sections: list[Section]) -> None:
+    """Takes each step's section number from the manual's own heading, not from the model.
+
+    Exact step lookup and the offline rules both depend on this number. Gemini once gave
+    every step its chapter number, 4, instead of 4.1, 4.2 and so on.
+    """
+    numbers = {" ".join(leaf.title.lower().split()): leaf.section for s in sections for leaf in s.leaves}
+    for step in procedure.steps:
+        step.section = numbers.get(" ".join(step.title.lower().split()), step.section)
 
 
 def ingest_text(pages: list[tuple[int, str]], title: str) -> tuple[int, int, dict]:
     raw = "\n".join(text for _, text in pages)
     sections = hierarchy(pages)
     procedure = extract(raw)
+    align_sections(procedure, sections)
     doc_id = save(title, procedure.revision, raw, len(pages), sections, procedure)
     procedure_id = propose(doc_id, procedure)
     leaves = sum(len(s.leaves) for s in sections)

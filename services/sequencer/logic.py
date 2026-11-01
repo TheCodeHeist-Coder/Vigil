@@ -74,8 +74,9 @@ def earliest_missing(run: Run, procedure: Procedure, step_id: str) -> str | None
 
 
 def on_pick(run: Run, procedure: Procedure, zone: str) -> list[Output]:
-    step = procedure.step_for_bin(zone)
-    if step is None or run.complete(step.id):
+    # Several steps can share a bin, like two sets of wires from one pile, so take the next one.
+    step = next((s for s in procedure.steps if s.bin == zone and not run.complete(s.id)), None)
+    if step is None:
         return []
 
     missing = earliest_missing(run, procedure, step.id)

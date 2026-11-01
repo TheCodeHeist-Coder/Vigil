@@ -34,12 +34,15 @@ class ZoneTracker:
     def update(self, hands: list[Point], now: float) -> list[tuple[str, str]]:
         events: list[tuple[str, str]] = []
         for zone in self.zones:
-            if any(inside(hand, zone.polygon) for hand in hands):
+            present = any(inside(hand, zone.polygon) for hand in hands)
+            if present:
                 self.last_seen[zone.id] = now
             elif now - self.last_seen.get(zone.id, -1e9) > GRACE_SECONDS:
                 self.entered.pop(zone.id, None)
                 self.fired.discard(zone.id)
                 continue
+            if not present:
+                continue  # grace keeps a dwell alive, but a hand that left must never fire it
             self.entered.setdefault(zone.id, now)
             if zone.id in self.fired or now - self.entered[zone.id] < DWELL_SECONDS:
                 continue

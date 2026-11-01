@@ -19,12 +19,27 @@ const IDLE: Link = { tone: "idle", label: "Not streaming" };
 let camera: Camera = { link: IDLE, size: "", devices: [], stream: null };
 let peer: RTCPeerConnection | null = null;
 let stopped = true;
+let screenLock: WakeLockSentinel | null = null;
 const listeners = new Set<() => void>();
 
 function update(change: Partial<Camera>) {
   camera = { ...camera, ...change };
   listeners.forEach((listener) => listener());
 }
+
+// A phone that locks its screen stops the camera, so stay awake while streaming.
+async function keepScreenOn() {
+  try {
+    screenLock = (await navigator.wakeLock?.request("screen")) ?? null;
+  } catch {
+    screenLock = null; // battery saver can refuse this, and the video still works
+  }
+}
+
+// The browser drops the lock whenever the page is hidden, so take it again on return.
+document.addEventListener("visibilitychange", () => {
+  if (!stopped && document.visibilityState === "visible") void keepScreenOn();
+});
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
@@ -106,6 +121,7 @@ export async function startCamera(device: string) {
   const settings = stream.getVideoTracks()[0].getSettings();
   const devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
   update({ stream, devices, size: settings.width ? `${settings.width} × ${settings.height}` : "" });
+  void keepScreenOn();
   await connect();
 }
 
@@ -113,6 +129,8 @@ export function stopCamera() {
   stopped = true;
   peer?.close();
   camera.stream?.getTracks().forEach((track) => track.stop());
+  void screenLock?.release();
+  screenLock = null;
   update({ stream: null, size: "", link: IDLE });
 }
 

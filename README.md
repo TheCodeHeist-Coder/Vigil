@@ -45,6 +45,99 @@ Screens and phone <---- gateway <-------- verdicts, incidents ---- reasoner <-->
 
 The sequencer raises the alert with no network call, so a slow or failed cloud call can never delay it. Gemini then checks the event against the manual. Every quote is checked against the manual text, and a verdict that fails this check stays on hold for a supervisor.
 
+## How we use YugabyteDB, Meko and the Gemini API
+
+Each has one clear job, and all three work together on every flagged event.
+
+| Technology | Its job in Vigil |
+| --- | --- |
+| **YugabyteDB** | Stores the manual as searchable vectors, plus every run, verdict and incident |
+| **Gemini API** | Reads the manual, looks at bench photos, makes decisions and writes incident reports |
+| **Meko** | Gives the AI agents shared memory and a record of their reasoning across runs |
+
+### What happens when a mistake is flagged
+
+1. A hand enters the wrong bin. The sequencer raises the stop straight away and sends a flag.
+2. The reasoner fetches up to 4 evidence frames from Kafka.
+3. **YugabyteDB** returns the manual text for the steps involved.
+4. Notes from earlier runs, already fetched from **Meko**, are added as background.
+5. **Gemini** reads the frames, manual text and notes, then answers with a status, a reason and an exact quote.
+6. Code checks that answer. The quote must exist in the manual, and clearing an order mistake needs a rule that names this unit's revision.
+7. The verdict is saved in **YugabyteDB**, the reasoning goes to **Meko**, and the screens update.
+8. If the mistake is confirmed, the incident agent uses **Gemini** to write the report, and the lesson is saved to **Meko** for later runs.
+
+### YugabyteDB
+
+YugabyteDB is our one database. It speaks the PostgreSQL protocol, so services connect with a normal PostgreSQL driver, and pgvector adds vector search in the same place as our records.
+
+| Table | What it holds |
+| --- | --- |
+| `documents` | Each manual that has been loaded |
+| `chunks` | Manual text and its 768-dimension embeddings, with a `ybhnsw` cosine index |
+| `procedures` | The steps read from each manual, and who approved them |
+| `runs` | Each unit assembled, with its serial and revision |
+| `verdicts` | Every decision, with its reason, citations, model and time |
+| `incidents` | Each confirmed fault, with its rework steps and report |
+| `agent_memory` | A copy of agent notes, used if Meko is off or unreachable |
+
+**How manual search works.** A manual is stored at two levels: sections, and smaller leaf chunks inside them.
+
+1. Text for the steps involved is fetched exactly by its step tag, so it never depends on search quality.
+2. A vector search finds the 3 closest sections.
+3. A second vector search finds the 5 closest leaf chunks inside those sections.
+
+Agents only search the approved manual, so an unapproved upload or edit changes nothing on the bench. See [`services/knowledge/retrieve.py`](services/knowledge/retrieve.py) and [`db/schema.sql`](db/schema.sql).
+
+### Gemini API
+
+Gemini handles everything that needs understanding, and the instant stop never waits for it.
+
+| Use | Model | Gemini receives | Gemini returns |
+| --- | --- | --- | --- |
+| Reading a manual | `gemini-3.5-flash-lite` | Manual text | The steps, as structured JSON |
+| Embeddings | `gemini-embedding-2` | Manual text and search queries | 768-dimension vectors |
+| Order check | `gemini-3.5-flash-lite` | Up to 4 frames, manual text, notes | Status, reason and quote |
+| Photo check | `gemini-3.5-flash-lite` | One photo with hands clear, up to 1024 px, plus the step's rule | Status, reason and quote |
+| Incident report | `gemini-3.5-flash-lite` | The fault, with function calling | A short written report |
+| Ask the manual | `gemini-3.5-flash-lite` | A question and manual text | An answer with a quote |
+| Voice clips, optional | `gemini-3.8-flash-tts` | Each spoken correction | Audio files |
+
+If the main decision model is busy, `gemini-3.8-flash` takes over.
+
+The incident agent has three tools it can call by itself: `get_run` for what happened, `search_manual` for the rules, and `past_incidents` for the step's history. Rework steps are worked out in code from the procedure, never by the model.
+
+**How we keep Gemini honest**
+
+- Answers use temperature 0 and a fixed JSON schema.
+- Every quote is checked against the manual text. A quote that is not there cannot pass.
+- The section and page come from where the quote was found, not from the model.
+- An order mistake can only be cleared by a rule naming this unit's revision, so a Rev B note can never clear a Rev A unit.
+- A photo check with no photo never reaches the model.
+- Text seen inside a photo is treated as evidence, never as an instruction.
+- If Gemini is unavailable, `local-rules` decides order checks from the manual and photo checks return `uncertain`. The screen always shows which one decided.
+
+See [`services/reasoner/judge.py`](services/reasoner/judge.py).
+
+### Meko
+
+[Meko](https://mekodata.ai) is Yugabyte's context engine for AI agents. Vigil connects to its MCP endpoint at `https://mcp.mekodata.ai/mcp` using a `mko_tkn_` key, and keeps everything in one datapack, `vigil-bench`.
+
+Two agents share that datapack: `vigil-verdict` decides each event, and `vigil-incident` investigates confirmed faults. What one learns, the other can use.
+
+| Meko tool | When we call it | Why |
+| --- | --- | --- |
+| `datapack_search`, `datapack_create` | At the first run | Finds or creates `vigil-bench` |
+| `conversation_create` | Once per run | Groups everything that happens on one unit |
+| `memory_search` | At the start of each run | Fetches notes on past faults, grouped by step |
+| `memory_add` | After a confirmed fault | Saves the lesson, tagged with its step |
+| `conversation_add_message` | After every verdict and incident | Records the decision and the reasoning behind it |
+
+**Meko can never slow down the bench.** A memory search takes about 10 seconds, so calls run on their own thread, and verdicts read notes that were fetched ahead of time. YugabyteDB keeps its own copy of every note, so losing Meko loses nothing.
+
+**Why this memory matters.** When a step keeps failing, agents can see that across units. On the third fault at a step, the incident record applies manual section 6.4 and raises it to the process engineer, because repeat faults point to the instruction, not the operator.
+
+See [`services/reasoner/context.py`](services/reasoner/context.py) and [`services/reasoner/meko.py`](services/reasoner/meko.py).
+
 ## Services
 
 Each service has its own folder and README, and talks to the others only through Kafka. Any one of them can be read, replaced or scaled alone.

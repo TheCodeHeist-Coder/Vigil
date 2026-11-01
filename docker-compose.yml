@@ -20,6 +20,8 @@ services:
       KAFKA_MESSAGE_MAX_BYTES: 2097152
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_HEAP_OPTS: "-Xmx768m -Xms256m"
+    mem_limit: 1g
+    cpus: 1
     restart: unless-stopped
 
   # Only needed on a machine with no YugabyteDB running. Start with: docker compose --profile db up -d
@@ -38,6 +40,8 @@ services:
       - "127.0.0.1:5433:5433"
     volumes:
       - yugabyte-data:/home/yugabyte/var
+    mem_limit: 2500m
+    cpus: 1.5
     restart: unless-stopped
 
 volumes:

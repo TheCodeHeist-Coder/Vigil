@@ -255,4 +255,4 @@ if WEB_BUILD.exists():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host=settings.bind_host, port=settings.gateway_port, log_level="warning", timeout_graceful_shutdown=1)
+    uvicorn.run(app, host=settings.gateway_bind or settings.bind_host, port=settings.gateway_port, log_level="warning", timeout_graceful_shutdown=1)

@@ -11,4 +11,4 @@ Receives camera video over WebRTC and writes JPEG frames to `frames.raw`.
 
 The browser posts its SDP offer to `POST /webrtc/offer`. Only the newest frame is kept, so a slow encode drops frames and never adds lag.
 
-No ICE servers are configured, because the camera and this service share a LAN. To scale, run one instance per bench.
+Set `WEBRTC_PORTS=40000-40099` to keep video on a fixed UDP range, so a server firewall stays narrow. To scale, run one instance per bench.

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from common.bus import producer
 from common.config import settings
 from common.frames import encode_jpeg, publish_frame
+from services.ingest.ports import limit_udp_ports, parse_range
 
 MAX_WIDTH = 1280
 
@@ -23,6 +24,8 @@ stats = {"frames": 0, "dropped": 0, "connected": 0}
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    if settings.webrtc_ports:
+        limit_udp_ports(asyncio.get_running_loop(), parse_range(settings.webrtc_ports))
     yield
     await asyncio.gather(*(pc.close() for pc in list(connections)))
     kafka.flush(5)
@@ -113,4 +116,5 @@ def health() -> dict[str, int]:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host=settings.bind_host, port=8101, log_level="warning", timeout_graceful_shutdown=1)
+    # uvloop's loop cannot be wrapped, and limit_udp_ports needs to wrap it.
+    uvicorn.run(app, host=settings.bind_host, port=8101, log_level="warning", timeout_graceful_shutdown=1, loop="asyncio")

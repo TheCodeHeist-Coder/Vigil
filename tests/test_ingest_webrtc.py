@@ -18,6 +18,7 @@ from common.config import settings
 from common.frames import read_frame
 from contracts.topics import FRAMES_RAW
 from services.ingest.main import app
+from services.ingest.ports import limit_udp_ports, parse_range
 
 PORT = 8191
 
@@ -56,10 +57,28 @@ async def publish(seconds: float, bench: str) -> None:
     await pc.close()
 
 
+def test_udp_ports_stay_in_range():
+    async def scenario():
+        loop = asyncio.get_running_loop()
+        limit_udp_ports(loop, parse_range("41000-41002"))
+        ports, transports = [], []
+        for _ in range(3):
+            transport, _protocol = await loop.create_datagram_endpoint(asyncio.DatagramProtocol, local_addr=("127.0.0.1", 0))
+            transports.append(transport)
+            ports.append(transport.get_extra_info("sockname")[1])
+        with pytest.raises(OSError, match="no free UDP port"):
+            await loop.create_datagram_endpoint(asyncio.DatagramProtocol, local_addr=("127.0.0.1", 0))
+        for transport in transports:
+            transport.close()
+        return ports
+
+    assert sorted(asyncio.run(scenario())) == [41000, 41001, 41002]
+
+
 @pytest.mark.integration
 def test_webrtc_video_reaches_kafka():
     bench = f"test-{uuid.uuid4().hex[:6]}"
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=PORT, log_level="warning"))
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=PORT, log_level="warning", loop="asyncio"))
     threading.Thread(target=server.run, daemon=True).start()
     time.sleep(1)
 

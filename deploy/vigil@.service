@@ -10,6 +10,10 @@ WorkingDirectory=/opt/vigil
 ExecStart=/opt/vigil/.venv/bin/python -m services.%i.main
 Restart=always
 RestartSec=3
+# This server also runs production apps, which must always come first.
+Nice=10
+CPUQuota=220%
+MemoryMax=1800M
 
 [Install]
 WantedBy=multi-user.target

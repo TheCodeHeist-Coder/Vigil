@@ -1,56 +1,59 @@
 #!/usr/bin/env bash
-# Sets up Vigil on an Ubuntu or Debian server. Safe to run again.
+# Sets up Vigil on an Ubuntu server that already runs other apps. Safe to run again.
 #
+# Nothing here touches existing containers, databases or web servers. It adds:
+#   /opt/vigil, a vigil user, five vigil@ services, the vigil-kafka and vigil-yugabyte
+#   containers, and two firewall rules.
+#
+# Run from the laptop first, so the server needs no Node and no model export:
+#   rsync -a .env manual models data web/dist <server>:/opt/vigil-files/
+# Then on the server, as root:
 #   git clone -b build https://github.com/TheCodeHeist-Coder/Vigil.git /opt/vigil
-#   scp .env <server>:/opt/vigil/.env
-#   sudo /opt/vigil/deploy/setup.sh
+#   GATEWAY_BIND=172.18.0.1 PROXY_SUBNET=172.18.0.0/16 /opt/vigil/deploy/setup.sh
 #
-# Set DOMAIN to use your own domain. Without it, the server's IP becomes a free
-# sslip.io address, which still gets a real HTTPS certificate.
+# To remove everything:
+#   systemctl disable --now vigil@{ingest,edge,sequencer,reasoner,gateway}
+#   cd /opt/vigil && docker compose --profile db down -v
+#   ufw delete allow 40000:40099/udp; ufw delete allow from $PROXY_SUBNET to any port 8100 proto tcp
+#   rm -rf /opt/vigil /etc/systemd/system/vigil@.service; userdel vigil
 set -euo pipefail
 
 APP=/opt/vigil
+FILES=/opt/vigil-files
 SERVICES="ingest edge sequencer reasoner gateway"
+UDP_PORTS=40000-40099
+: "${GATEWAY_BIND:?Set GATEWAY_BIND to the Docker gateway IP of your reverse proxy}"
+: "${PROXY_SUBNET:?Set PROXY_SUBNET to the Docker subnet of your reverse proxy}"
 cd "$APP"
 
-[ "$(id -u)" = 0 ] || { echo "Run this with sudo."; exit 1; }
-grep -q '^GEMINI_API_KEY=.' .env || { echo "Copy your .env to $APP/.env first."; exit 1; }
-grep -q '^VIGIL_ACCESS_KEY=.' .env || { echo "Set VIGIL_ACCESS_KEY in .env first. A public server must not run without it."; exit 1; }
+[ "$(id -u)" = 0 ] || { echo "Run this as root."; exit 1; }
+[ -f "$FILES/.env" ] || { echo "Copy the files to $FILES first."; exit 1; }
+grep -q '^VIGIL_ACCESS_KEY=.' "$FILES/.env" || { echo "VIGIL_ACCESS_KEY is missing. A public server must not run without it."; exit 1; }
 
-if ss -ltnp | grep -E ':(80|443) ' | grep -qv caddy; then
-  echo "Something else is using port 80 or 443:"
-  ss -ltnp | grep -E ':(80|443) '
-  echo "Stopping so nothing on this server breaks. Add Vigil to that web server instead,"
-  echo "pointing it at localhost:8100, then run this again with SKIP_CADDY=1."
-  [ "${SKIP_CADDY:-0}" = 1 ] || exit 1
-fi
-
-PUBLIC_IP=$(curl -4 -fsS https://ifconfig.me)
-DOMAIN=${DOMAIN:-$(echo "$PUBLIC_IP" | tr . -).sslip.io}
+echo "== files"
+cp "$FILES/.env" .env
+cp -r "$FILES/manual/." manual/
+cp -r "$FILES/models/." models/
+mkdir -p data web/dist
+cp -r "$FILES/data/." data/
+cp -r "$FILES/dist/." web/dist/
+sed -i '/^KAFKA_BIND=/d;/^BIND_HOST=/d;/^GATEWAY_BIND=/d;/^WEBRTC_PORTS=/d;/^LAN_IP=/d' .env
+printf 'KAFKA_BIND=127.0.0.1\nBIND_HOST=127.0.0.1\nGATEWAY_BIND=%s\nWEBRTC_PORTS=%s\nLAN_IP=localhost\n' "$GATEWAY_BIND" "$UDP_PORTS" >> .env
 
 echo "== packages"
 apt-get update -qq
-apt-get install -y -qq curl git ca-certificates debian-keyring debian-archive-keyring apt-transport-https gnupg libgl1 libglib2.0-0 >/dev/null
-command -v docker >/dev/null || curl -fsSL https://get.docker.com | sh
+apt-get install -y -qq libgl1 libegl1 libgles2 libglib2.0-0 >/dev/null
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
-if ! command -v node >/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y -qq nodejs >/dev/null
-fi
-corepack enable >/dev/null 2>&1 || npm install -g pnpm >/dev/null
-
-echo "== settings"
-sed -i '/^KAFKA_BIND=/d;/^BIND_HOST=/d;/^LAN_IP=/d' .env
-printf 'KAFKA_BIND=127.0.0.1\nBIND_HOST=127.0.0.1\nLAN_IP=localhost\n' >> .env
-chmod 640 .env
 
 echo "== Kafka and YugabyteDB"
 docker compose --profile db up -d
 echo "waiting for YugabyteDB"
+ready=0
 for _ in $(seq 1 90); do
-  docker exec vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -c "SELECT 1"' >/dev/null 2>&1 && break
+  if docker exec vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -c "SELECT 1"' >/dev/null 2>&1; then ready=1; break; fi
   sleep 2
 done
+[ "$ready" = 1 ] || { echo "YugabyteDB did not start."; docker logs --tail 20 vigil-yugabyte; exit 1; }
 docker exec vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -tc "SELECT 1 FROM pg_database WHERE datname = '"'"'vigil'"'"'"' | grep -q 1 \
   || docker exec vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -c "CREATE DATABASE vigil;"'
 docker exec -i vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -d vigil -q' < db/schema.sql
@@ -58,11 +61,10 @@ docker exec -i vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -d vi
 echo "== app"
 id vigil >/dev/null 2>&1 || useradd --system --home-dir "$APP" --shell /usr/sbin/nologin vigil
 chown -R vigil:vigil "$APP"
+chmod 640 .env
 as_vigil() { sudo -u vigil -H "$@"; }
 as_vigil uv sync --no-dev
-(cd web && as_vigil pnpm install --frozen-lockfile && as_vigil pnpm exec vite build)
 for _ in $(seq 1 30); do as_vigil .venv/bin/python -m tools.topics >/dev/null 2>&1 && break; sleep 1; done
-as_vigil .venv/bin/python -m tools.fetch_models
 as_vigil .venv/bin/python -m services.knowledge.main manual/vg100.md
 
 echo "== services"
@@ -70,31 +72,9 @@ cp deploy/vigil@.service /etc/systemd/system/
 systemctl daemon-reload
 for name in $SERVICES; do systemctl enable --now "vigil@$name"; systemctl restart "vigil@$name"; done
 
-if [ "${SKIP_CADDY:-0}" != 1 ]; then
-  echo "== HTTPS"
-  if ! command -v caddy >/dev/null; then
-    curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-    curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt > /etc/apt/sources.list.d/caddy-stable.list
-    apt-get update -qq
-    apt-get install -y -qq caddy >/dev/null
-  fi
-  cp deploy/Caddyfile /etc/caddy/Caddyfile
-  mkdir -p /etc/systemd/system/caddy.service.d
-  printf '[Service]\nEnvironment=DOMAIN=%s\n' "$DOMAIN" > /etc/systemd/system/caddy.service.d/domain.conf
-  systemctl daemon-reload
-  systemctl restart caddy
-fi
+echo "== firewall"
+ufw allow "${UDP_PORTS/-/:}/udp" comment 'Vigil WebRTC video'
+ufw allow from "$PROXY_SUBNET" to any port 8100 proto tcp comment 'Vigil through the proxy'
 
-# WebRTC video reaches the server on random UDP ports.
-if command -v ufw >/dev/null && ufw status | grep -q 'Status: active'; then
-  ufw allow 80/tcp >/dev/null
-  ufw allow 443/tcp >/dev/null
-  ufw allow 1024:65535/udp >/dev/null
-fi
-
-KEY=$(grep '^VIGIL_ACCESS_KEY=' .env | cut -d= -f2)
 echo
-echo "Done. If your provider has its own firewall, also open TCP 80 and 443, and UDP 1024-65535."
-echo "Team link:  https://$DOMAIN/?key=$KEY"
-echo "Phone:      https://$DOMAIN/?key=$KEY#/phone"
-echo "Camera:     https://$DOMAIN/?key=$KEY#/camera"
+echo "Done. Gateway is on http://$GATEWAY_BIND:8100, for your reverse proxy."

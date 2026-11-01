@@ -29,6 +29,8 @@ class Settings:
     ingest_url: str = os.getenv("INGEST_URL", "http://localhost:8101")
     gateway_port: int = int(os.getenv("GATEWAY_PORT", "8100"))
     bind_host: str = os.getenv("BIND_HOST", "0.0.0.0")  # 127.0.0.1 behind a reverse proxy
+    gateway_bind: str = os.getenv("GATEWAY_BIND", "")  # where a reverse proxy reaches the gateway
+    webrtc_ports: str = os.getenv("WEBRTC_PORTS", "")  # like 40000-40099, for a narrow firewall
 
 
 settings = Settings()

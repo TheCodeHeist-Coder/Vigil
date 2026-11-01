@@ -23,7 +23,7 @@ const RESULT = {
   uncertain: "Unsure",
 };
 
-const EXAMPLES = ["Which STM32 pin does SCL connect to?", "When can I plug in the USB cable?", "What if the same fault keeps happening?"];
+const EXAMPLES = ["Which pin does SCL connect to?", "When can I plug in the USB cable?", "What if the same fault keeps happening?"];
 
 function ResultsTab({ results, log }: { results: Results | null; log: Log }) {
   const cards = [
@@ -124,7 +124,7 @@ function AskTab() {
 
   return (
     <section className="card ask">
-      <h2>Ask anything about the VDN-1 manual</h2>
+      <h2>Ask anything about the approved manual</h2>
       <form
         onSubmit={(e) => {
           e.preventDefault();

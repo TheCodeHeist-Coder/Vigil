@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from contracts.models import Procedure, Step
 from services.gateway import main as gateway
 
 
@@ -41,3 +42,16 @@ def test_good_manual_is_read_and_proposed(monkeypatch, tmp_path):
     assert response.status_code == 200 and response.json()["procedure_id"] == 2
     assert ingested[0][1] == "my-manual"
     assert "4.1 Fit the board" in saved.read_text()
+
+
+def test_approving_a_manual_renames_bins_and_keeps_their_positions():
+    box = [[0.1, 0.1], [0.2, 0.1], [0.2, 0.2], [0.1, 0.2]]
+    zones = [
+        {"id": "A", "label": "Bin A · STM32", "kind": "bin", "polygon": box},
+        {"id": "F", "label": "Bin F · Old", "kind": "bin", "polygon": box},
+        {"id": "TRAY", "label": "Breadboard", "kind": "tray", "polygon": box},
+    ]
+    step = Step(id="S1", section="4.1", title="t", bin="A", part="Arduino", check="c", correction="x")
+    named = gateway.zones_for(Procedure(steps=[step]), zones)
+    assert [z.label for z in named] == ["Bin A · Arduino", "Bin F", "Breadboard"]
+    assert named[0].polygon == [tuple(p) for p in box]

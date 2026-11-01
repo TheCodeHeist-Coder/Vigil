@@ -1,23 +1,29 @@
-"""Writes manual/vdn1.pdf from the Markdown source, one PDF page per page marker."""
+"""Writes a PDF from a Markdown manual, one PDF page per page marker.
+
+  python -m tools.export_manual manual/adn1.md
+"""
 
 import re
+import sys
+from pathlib import Path
 
 from fpdf import FPDF
 
 from common.config import ROOT
 from services.knowledge.parse import split_markdown
 
-SOURCE = ROOT / "manual" / "vdn1.md"
-TARGET = ROOT / "manual" / "vdn1.pdf"
+DEFAULT = ROOT / "manual" / "vdn1.md"
 WIDTH = 170
 SIZES = {"#": 18, "##": 14, "###": 12}
 
 
 def main() -> None:
+    source = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT
+    target = source.with_suffix(".pdf")
     pdf = FPDF(format="A4")
     pdf.set_auto_page_break(False)
     pdf.set_margin(20)
-    for _, text in split_markdown(SOURCE.read_text()):
+    for _, text in split_markdown(source.read_text()):
         pdf.add_page()
         for line in text.splitlines():
             line = line.rstrip()
@@ -34,8 +40,8 @@ def main() -> None:
                 pdf.multi_cell(WIDTH, 6, line, new_x="LMARGIN", new_y="NEXT")
             else:
                 pdf.ln(2)
-    pdf.output(str(TARGET))
-    print(f"wrote {TARGET} with {pdf.page_no()} pages")
+    pdf.output(str(target))
+    print(f"wrote {target} with {pdf.page_no()} pages")
 
 
 if __name__ == "__main__":

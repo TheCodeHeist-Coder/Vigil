@@ -233,6 +233,18 @@ def upload_manual(file: UploadFile = File(...)) -> dict:
     return {"doc_id": doc_id, "procedure_id": procedure_id, **report}
 
 
+def zones_for(procedure: Procedure, zones: list[dict]) -> list[Zone]:
+    """Names each bin after the part this manual puts in it, and keeps where it was drawn."""
+    parts = {step.bin: step.part for step in procedure.steps}
+    named = []
+    for zone in zones:
+        if zone["kind"] == "bin":
+            part = parts.get(zone["id"])
+            zone = {**zone, "label": f"Bin {zone['id']} · {part}" if part else f"Bin {zone['id']}"}
+        named.append(Zone(**zone))
+    return named
+
+
 @app.post("/api/procedures/{procedure_id}/approve")
 def approve_procedure(procedure_id: int, body: Approval, bench: str = settings.bench_id) -> Procedure:
     if not body.engineer.strip():
@@ -240,6 +252,9 @@ def approve_procedure(procedure_id: int, body: Approval, bench: str = settings.b
     procedure = approve(procedure_id, body.engineer)
     PROCEDURE.write_text(json.dumps(procedure.model_dump(), indent=2))
     control(RunControl(kind="procedure", bench=bench, procedure=procedure))
+    zones = zones_for(procedure, json.loads(ZONES.read_text()))
+    ZONES.write_text(json.dumps([z.model_dump() for z in zones], indent=2, ensure_ascii=False))
+    control(RunControl(kind="zones", bench=bench, zones=zones))
     return procedure
 
 

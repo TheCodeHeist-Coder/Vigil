@@ -171,7 +171,7 @@ button.ghost:hover:not(:disabled) { background: var(--sunken); border-color: var
 .bench-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(340px, 1fr); gap: 14px; align-items: start; }
 .bench-main, .bench-side { display: grid; gap: 14px; min-width: 0; }
 
-.stage { position: relative; aspect-ratio: 16 / 9; background: #111827; border-radius: var(--radius); overflow: hidden; }
+.stage { position: relative; width: 100%; margin-inline: auto; background: #111827; border-radius: var(--radius); overflow: hidden; }
 .stage img, .stage canvas, .stage-blank { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .stage canvas.drawing { cursor: crosshair; touch-action: none; }
 .stage-empty { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 24px; text-align: center; color: #cbd5e1; background: rgba(17, 24, 39, 0.82); }

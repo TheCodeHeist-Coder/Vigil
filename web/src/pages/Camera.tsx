@@ -70,6 +70,7 @@ export function Camera(_: { status: Status | null }) {
           <div className="tips">
             <h2>Get the best view</h2>
             <ul>
+              <li>Hold the phone sideways, so the video is wide.</li>
               <li>Place the camera high and in front, at about 45 degrees.</li>
               <li>Show the whole bench and the operator's shoulders.</li>
               <li>Keep it still, and keep the bench well lit.</li>

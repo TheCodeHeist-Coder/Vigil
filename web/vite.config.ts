@@ -15,7 +15,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/api": gateway,
-      "/video": gateway,
+      "/frame.jpg": gateway,
       "/ws": { target: gateway, ws: true },
       "/webrtc": "http://localhost:8101",
     },

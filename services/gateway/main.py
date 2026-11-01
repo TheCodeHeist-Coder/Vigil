@@ -11,7 +11,6 @@ from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -32,7 +31,6 @@ MANUAL = ROOT / "manual" / "vg100.md"
 PROCEDURE = ROOT / "manual" / "procedure.json"
 ZONES = ROOT / "manual" / "zones.json"
 WEB_BUILD = ROOT / "web" / "dist"
-VIDEO_FPS = 15
 
 kafka = producer()
 meko_status = (
@@ -113,17 +111,13 @@ async def webrtc_offer(request: Request) -> Response:
     return Response(upstream.content, upstream.status_code, media_type="application/json")
 
 
-@app.get("/video")
-async def video() -> StreamingResponse:
-    async def stream():
-        seen = 0
-        while True:
-            if hub.jpeg and hub.frame_count != seen:
-                seen = hub.frame_count
-                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + hub.jpeg + b"\r\n"
-            await asyncio.sleep(1 / VIDEO_FPS)
-
-    return StreamingResponse(stream(), media_type="multipart/x-mixed-replace; boundary=frame")
+@app.get("/frame.jpg")
+def frame() -> Response:
+    """Browsers ask for one frame at a time, so a slow connection can never build up a delay."""
+    jpeg = hub.preview()
+    if jpeg is None:
+        return Response(status_code=204)
+    return Response(jpeg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/status")
@@ -142,7 +136,7 @@ def status() -> dict:
         "documents": documents,
         "meko": meko_status,
         "replay": settings.replay,
-        "camera_live": time.time() - hub.last_frame_at < 2,
+        "camera_live": hub.preview() is not None,
     }
 
 

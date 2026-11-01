@@ -5,6 +5,8 @@ import json
 import threading
 import time
 
+import cv2
+import numpy as np
 from confluent_kafka import OFFSET_END, Consumer, TopicPartition
 from fastapi import WebSocket
 
@@ -21,6 +23,9 @@ from contracts.topics import (
 )
 
 TRACK_INTERVAL = 1 / 15  # hand positions are frequent, so browsers get them at 15 Hz
+PREVIEW_SIDE = 640  # the live view stays light, so it works on a slow connection
+PREVIEW_QUALITY = 60
+CAMERA_TIMEOUT = 2.0
 
 
 class Hub:
@@ -31,6 +36,22 @@ class Hub:
         self.frame_count = 0
         self.last_frame_at = 0.0
         self.last_state: dict | None = None
+        self.preview_jpeg: bytes | None = None
+        self.preview_of = -1
+
+    def preview(self) -> bytes | None:
+        """The newest frame, made small. Each frame is only resized once, however many watch."""
+        if self.jpeg is None or time.time() - self.last_frame_at > CAMERA_TIMEOUT:
+            return None
+        if self.preview_of != self.frame_count:
+            count, jpeg = self.frame_count, self.jpeg
+            image = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
+            height, width = image.shape[:2]
+            scale = PREVIEW_SIDE / max(height, width)
+            small = cv2.resize(image, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+            self.preview_jpeg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, PREVIEW_QUALITY])[1].tobytes()
+            self.preview_of = count
+        return self.preview_jpeg
 
     def start(self, loop: asyncio.AbstractEventLoop) -> None:
         self.loop = loop

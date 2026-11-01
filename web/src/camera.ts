@@ -38,7 +38,9 @@ async function connect() {
   const pc = new RTCPeerConnection({ iceServers: [] });
   peer = pc;
   stream.getVideoTracks().forEach((track) => {
-    track.contentHint = "detail"; // keep resolution, and drop frame rate first if the link is slow
+    // On a slow link, keep the motion and lower the resolution. Protecting resolution
+    // dropped a real phone to 1 fps, which is too few frames to see a hand enter a bin.
+    track.contentHint = "motion";
     pc.addTrack(track, stream);
   });
   const retry = () => {
@@ -76,7 +78,7 @@ export async function startCamera(device: string) {
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, deviceId: device ? { exact: device } : undefined, facingMode: device ? undefined : "environment" },
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 }, deviceId: device ? { exact: device } : undefined, facingMode: device ? undefined : "environment" },
       audio: false,
     });
   } catch (error) {

@@ -14,10 +14,16 @@ type Props = {
 };
 
 const TARGET = "#22c58b";
+const FRAME_GAP_MS = 80; // at most about 12 frames a second
+const RETRY_MS = 500;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const QUIET = "rgba(255,255,255,.7)";
 
 export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onSetup }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const video = useRef<HTMLImageElement>(null);
+  const [ratio, setRatio] = useState(16 / 9);
   const [index, setIndex] = useState(0);
   const [drag, setDrag] = useState<{ start: Point; end: Point } | null>(null);
 
@@ -79,9 +85,44 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
       c.fillRect(x1, y1, x2 - x1, y2 - y1);
       c.strokeRect(x1, y1, x2 - x1, y2 - y1);
     }
-  }, [zones, track, targetBin, drag, current, cameraLive]);
+  }, [zones, track, targetBin, drag, current, cameraLive, ratio]);
 
   useEffect(() => setIndex(0), [setup]);
+
+  // Asks for the next frame only after showing the last, so delay can never build up.
+  useEffect(() => {
+    if (!cameraLive) return;
+    let alive = true;
+    let shown = "";
+    (async () => {
+      while (alive) {
+        const started = performance.now();
+        try {
+          const response = await fetch("/frame.jpg", { cache: "no-store" });
+          if (response.status === 200 && video.current) {
+            const url = URL.createObjectURL(await response.blob());
+            video.current.src = url;
+            if (shown) URL.revokeObjectURL(shown);
+            shown = url;
+          } else {
+            await wait(RETRY_MS);
+          }
+        } catch {
+          await wait(RETRY_MS);
+        }
+        await wait(Math.max(0, FRAME_GAP_MS - (performance.now() - started)));
+      }
+    })();
+    return () => {
+      alive = false;
+      if (shown) URL.revokeObjectURL(shown);
+    };
+  }, [cameraLive]);
+
+  function onFrame(event: React.SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    if (naturalWidth && naturalHeight) setRatio(naturalWidth / naturalHeight);
+  }
 
   const point = (event: React.PointerEvent): Point => {
     const box = canvas.current!.getBoundingClientRect();
@@ -123,8 +164,8 @@ export function Stage({ zones, onZones, track, targetBin, cameraLive, setup, onS
 
   return (
     <div className="stage-wrap">
-    <div className="stage">
-      {cameraLive ? <img src="/video" alt="Live view of the bench" /> : <div className="stage-blank" />}
+    <div className="stage" style={{ aspectRatio: ratio, maxWidth: `calc(72vh * ${ratio})` }}>
+      {cameraLive ? <img ref={video} onLoad={onFrame} alt="Live view of the bench" /> : <div className="stage-blank" />}
       <canvas
         ref={canvas}
         className={setup ? "drawing" : ""}

@@ -3,13 +3,14 @@
 import asyncio
 import json
 import statistics
+import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -23,7 +24,7 @@ from services.gateway.access import AccessKey
 from services.gateway.ask import ask
 from services.gateway.live import hub
 from services.knowledge.main import ingest_text
-from services.knowledge.parse import split_markdown
+from services.knowledge.parse import hierarchy, read_pages, split_markdown
 from services.knowledge.store import approve
 from services.reasoner.meko import MekoClient
 
@@ -31,6 +32,8 @@ MANUAL = ROOT / "manual" / "vdn1.md"
 PROCEDURE = ROOT / "manual" / "procedure.json"
 ZONES = ROOT / "manual" / "zones.json"
 WEB_BUILD = ROOT / "web" / "dist"
+MANUAL_TYPES = (".pdf", ".md", ".txt")
+MAX_MANUAL_BYTES = 20 * 1024 * 1024
 
 kafka = producer()
 meko_status = (
@@ -187,6 +190,34 @@ def put_manual(body: ManualEdit) -> dict:
     """Re-ingests the manual and proposes a procedure. Nothing changes until an engineer approves."""
     MANUAL.write_text(body.text)
     doc_id, procedure_id, report = ingest_text(split_markdown(body.text), Path(MANUAL).stem)
+    return {"doc_id": doc_id, "procedure_id": procedure_id, **report}
+
+
+@app.post("/api/manual/upload")
+def upload_manual(file: UploadFile = File(...)) -> dict:
+    """Reads a PDF or text manual and proposes a procedure. An engineer still has to approve it."""
+    name = Path(file.filename or "manual")
+    if name.suffix.lower() not in MANUAL_TYPES:
+        raise HTTPException(400, "Upload a PDF, Markdown or text file.")
+    data = file.file.read(MAX_MANUAL_BYTES + 1)
+    if len(data) > MAX_MANUAL_BYTES:
+        raise HTTPException(400, "That file is over 20 MB.")
+
+    with tempfile.NamedTemporaryFile(suffix=name.suffix.lower()) as saved:
+        saved.write(data)
+        saved.flush()
+        try:
+            pages = read_pages(Path(saved.name))
+        except Exception:
+            raise HTTPException(400, "Vigil could not open that file.")
+
+    if not any(text.strip() for _, text in pages):
+        raise HTTPException(400, "This file has no readable text. A scanned PDF needs text in it first.")
+    if not hierarchy(pages):
+        raise HTTPException(400, "No numbered sections found. Use headings like 4 Assembly and 4.1 Fit the board.")
+
+    doc_id, procedure_id, report = ingest_text(pages, name.stem)
+    MANUAL.write_text("\n".join(f"<!-- page {page} -->\n{text}" for page, text in pages))
     return {"doc_id": doc_id, "procedure_id": procedure_id, **report}
 
 

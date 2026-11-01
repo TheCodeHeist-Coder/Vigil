@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from common.db import connect, vector
 from services.knowledge.embed import embed
-from services.knowledge.store import latest_doc_id
+from services.knowledge.store import active_doc_id
 
 TOP_SECTIONS = 3
 TOP_LEAVES = 5
@@ -22,7 +22,7 @@ class Excerpt:
 def search(query: str, step_ids: list[str] | None = None) -> list[Excerpt]:
     query_vector = vector(embed([query])[0])
     with connect() as db:
-        doc_id = latest_doc_id(db)
+        doc_id = active_doc_id(db)
         if doc_id is None:
             return []
 

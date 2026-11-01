@@ -6,7 +6,7 @@ from pathlib import Path
 from services.knowledge.embed import backend
 from services.knowledge.extract import extract
 from services.knowledge.parse import hierarchy, read_pages
-from services.knowledge.store import propose, save
+from services.knowledge.store import approve, propose, save
 
 
 def ingest_text(pages: list[tuple[int, str]], title: str) -> tuple[int, int, dict]:
@@ -31,6 +31,7 @@ def main() -> None:
     parser.add_argument("path", type=Path)
     args = parser.parse_args()
     doc_id, procedure_id, report = ingest_text(read_pages(args.path), args.path.stem)
+    approve(procedure_id, "setup")  # running this by hand is the approval
     report.pop("procedure")
     print(f"document {doc_id}, procedure {procedure_id}: {report}")
 

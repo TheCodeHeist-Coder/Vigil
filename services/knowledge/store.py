@@ -73,6 +73,11 @@ def approve(procedure_id: int, engineer: str) -> Procedure:
     return Procedure(**{**row[0], "id": procedure_id, "doc_id": row[1]})
 
 
-def latest_doc_id(db) -> int | None:
-    row = db.execute("SELECT id FROM documents ORDER BY created_at DESC LIMIT 1").fetchone()
+def active_doc_id(db) -> int | None:
+    """The approved manual, so an unapproved edit can never change what agents cite."""
+    row = db.execute(
+        "SELECT doc_id FROM procedures WHERE approved_at IS NOT NULL ORDER BY approved_at DESC LIMIT 1"
+    ).fetchone()
+    if row is None:
+        row = db.execute("SELECT id FROM documents ORDER BY created_at DESC LIMIT 1").fetchone()
     return row[0] if row else None

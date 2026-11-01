@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { get, post, put } from "../api";
+import { get, post, put, upload } from "../api";
 import { Icon, type IconName } from "../components/Icon";
 import type { Citation, Procedure, Status, Step } from "../types";
 
@@ -171,6 +171,7 @@ function ManualTab() {
   const [engineer, setEngineer] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [problem, setProblem] = useState("");
 
   const load = () => void get<Procedure>("/api/procedure").then(setCurrent);
 
@@ -182,10 +183,26 @@ function ManualTab() {
   async function read() {
     setBusy(true);
     setNotice("");
+    setProblem("");
     try {
       setProposal(await put<Proposal>("/api/manual", { text: manual }));
     } catch {
-      setNotice("Vigil could not read the manual. Check it and try again.");
+      setProblem("Vigil could not read the manual. Check it and try again.");
+    }
+    setBusy(false);
+  }
+
+  async function uploadFile(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setNotice("");
+    setProblem("");
+    setProposal(null);
+    try {
+      setProposal(await upload<Proposal>("/api/manual/upload", file));
+      void get<{ text: string }>("/api/manual").then((m) => setManual(m.text));
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : "Vigil could not read that file.");
     }
     setBusy(false);
   }
@@ -205,11 +222,17 @@ function ManualTab() {
   return (
     <div className="manual-grid">
       <section className="card manual-edit">
-        <h2>1. Change the manual</h2>
-        <p className="muted">Edit the text, then ask Vigil to read it. Nothing changes on the bench yet.</p>
+        <h2>1. Give Vigil the manual</h2>
+        <p className="muted">Upload a file, or edit the text below. Nothing changes on the bench until an engineer approves it.</p>
+        <label className={`upload ${busy ? "busy" : ""}`}>
+          <input type="file" accept=".pdf,.md,.txt" disabled={busy} onChange={(e) => void uploadFile(e.target.files?.[0])} />
+          <Icon name="book" size={18} />
+          <span>{busy ? "Reading the manual" : "Upload a PDF, Markdown or text file"}</span>
+        </label>
+        {problem && <p className="notice bad">{problem}</p>}
         <textarea value={manual} onChange={(e) => setManual(e.target.value)} aria-label="Manual text" />
-        <button onClick={read} disabled={busy}>
-          {busy ? "Reading the manual" : "Read the manual"}
+        <button className="ghost" onClick={read} disabled={busy}>
+          {busy ? "Reading the manual" : "Read the edited text"}
         </button>
       </section>
 
@@ -217,7 +240,7 @@ function ManualTab() {
         <h2>2. Review and approve</h2>
         {notice && <p className="notice">{notice}</p>}
         {!proposal ? (
-          <p className="muted">After Vigil reads the manual, its steps appear here for an engineer to approve.</p>
+          <p className="muted">After Vigil reads a manual, its steps appear here for an engineer to approve.</p>
         ) : (
           <>
             <p className="muted">

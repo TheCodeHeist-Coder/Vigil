@@ -7,6 +7,7 @@ from common.db import connect
 from services.knowledge import retrieve
 from services.knowledge.extract import with_step_ids
 from services.knowledge.main import ingest_text
+from services.knowledge.store import approve
 from services.knowledge.parse import hierarchy, read_pages, split_markdown
 
 MANUAL = ROOT / "tests" / "fixtures" / "vg100.md"
@@ -69,6 +70,7 @@ def test_ingest_and_search_against_yugabyte(monkeypatch):
     monkeypatch.setattr("services.knowledge.extract.settings", replace(settings, gemini_api_key=""))
     doc_id, procedure_id, report = ingest_text(read_pages(MANUAL), "vg100-test")
     try:
+        approve(procedure_id, "test")
         assert doc_id and procedure_id
         assert report["pages"] == 10 and report["steps"] == 5
 

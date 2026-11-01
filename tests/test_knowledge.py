@@ -4,9 +4,10 @@ import pytest
 
 from common.config import ROOT, settings
 from common.db import connect
+from contracts.models import Procedure, Step
 from services.knowledge import retrieve
 from services.knowledge.extract import with_step_ids
-from services.knowledge.main import ingest_text
+from services.knowledge.main import align_sections, ingest_text
 from services.knowledge.store import approve
 from services.knowledge.parse import hierarchy, read_pages, split_markdown
 
@@ -58,6 +59,21 @@ def test_extracted_steps_are_renumbered_with_their_dependencies():
     procedure = with_step_ids(body)
     assert [s.id for s in procedure.steps] == ["S1", "S2"]
     assert procedure.steps[1].requires == ["S1"]
+
+
+def test_step_sections_come_from_the_manual_headings():
+    sections = hierarchy(read_pages(ROOT / "manual" / "adn1.pdf"))
+    step = dict(id="S2", section="4", title="Seat the OLED display on the breadboard", bin="B", check="c", correction="x")
+    procedure = Procedure(steps=[Step(**step)])
+    align_sections(procedure, sections)
+    assert procedure.steps[0].section == "4.2"
+
+
+def test_a_step_with_no_matching_heading_keeps_its_section():
+    step = dict(id="S1", section="4.9", title="Something else", bin="A", check="c", correction="x")
+    procedure = Procedure(steps=[Step(**step)])
+    align_sections(procedure, hierarchy(read_pages(MANUAL)))
+    assert procedure.steps[0].section == "4.9"
 
 
 def test_unmarked_text_is_one_page():

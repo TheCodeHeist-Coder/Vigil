@@ -34,6 +34,9 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
+echo "building the web app"
+(cd web && pnpm exec vite build >../logs/web-build.log 2>&1) || echo "web build failed, see logs/web-build.log"
+
 for name in $SERVICES; do
   nohup .venv/bin/python -m "services.$name.main" >"logs/$name.log" 2>&1 </dev/null &
   echo $! >"logs/$name.pid"
@@ -58,3 +61,5 @@ echo "On a phone, on the same network, accepting the certificate warning"
 LAN=$(hostname -I 2>/dev/null | cut -d' ' -f1)
 echo "  Phone       https://$LAN:5174/#/phone"
 echo "  Camera      https://$LAN:5174/#/camera"
+echo
+echo "For a real HTTPS link, run: ngrok http 8100"

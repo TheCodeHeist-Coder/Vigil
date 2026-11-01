@@ -3,7 +3,8 @@ services:
     image: apache/kafka:4.4.0
     container_name: vigil-kafka
     ports:
-      - "9092:9092"
+      # Docker skips the firewall, so on a server set KAFKA_BIND=127.0.0.1 in .env.
+      - "${KAFKA_BIND:-0.0.0.0}:9092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller

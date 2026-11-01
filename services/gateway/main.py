@@ -8,9 +8,11 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+import httpx
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from common.bus import producer, publish
@@ -18,6 +20,7 @@ from common.config import ROOT, settings
 from common.db import connect
 from contracts.models import Procedure, RunControl, Zone
 from contracts.topics import RUN_CONTROL
+from services.gateway.access import AccessKey
 from services.gateway.ask import ask
 from services.gateway.live import hub
 from services.knowledge.main import ingest_text
@@ -28,6 +31,7 @@ from services.reasoner.meko import MekoClient
 MANUAL = ROOT / "manual" / "vg100.md"
 PROCEDURE = ROOT / "manual" / "procedure.json"
 ZONES = ROOT / "manual" / "zones.json"
+WEB_BUILD = ROOT / "web" / "dist"
 VIDEO_FPS = 15
 
 kafka = producer()
@@ -60,6 +64,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="vigil-gateway", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(AccessKey, key=settings.access_key)
 
 
 class NewRun(BaseModel):
@@ -94,6 +99,18 @@ async def live(socket: WebSocket) -> None:
             await socket.receive_text()
     except WebSocketDisconnect:
         hub.leave(socket)
+
+
+@app.post("/webrtc/offer")
+async def webrtc_offer(request: Request) -> Response:
+    """Lets one public address carry everything. Video itself still travels peer to peer."""
+    async with httpx.AsyncClient(timeout=20) as client:
+        upstream = await client.post(
+            f"{settings.ingest_url}/webrtc/offer",
+            content=await request.body(),
+            headers={"Content-Type": "application/json"},
+        )
+    return Response(upstream.content, upstream.status_code, media_type="application/json")
 
 
 @app.get("/video")
@@ -230,7 +247,12 @@ def results() -> dict:
     }
 
 
+# Last, so every route above wins. dev.sh builds this folder before starting the gateway.
+if WEB_BUILD.exists():
+    app.mount("/", StaticFiles(directory=WEB_BUILD, html=True))
+
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8100, log_level="warning", timeout_graceful_shutdown=1)
+    uvicorn.run(app, host=settings.bind_host, port=settings.gateway_port, log_level="warning", timeout_graceful_shutdown=1)

@@ -1,0 +1,15 @@
+# One unit per service: systemctl enable --now vigil@gateway
+[Unit]
+Description=Vigil %i
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=vigil
+WorkingDirectory=/opt/vigil
+ExecStart=/opt/vigil/.venv/bin/python -m services.%i.main
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

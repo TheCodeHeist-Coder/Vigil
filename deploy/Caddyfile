@@ -1,0 +1,6 @@
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy localhost:8100 {
+		flush_interval -1
+	}
+}

@@ -25,6 +25,10 @@ class Settings:
     meko_mcp_url: str = os.getenv("MEKO_MCP_URL", "https://mcp.mekodata.ai/mcp")
     meko_datapack_name: str = os.getenv("MEKO_DATAPACK_NAME", "vigil-bench")
     replay: bool = os.getenv("REPLAY", "0") == "1"
+    access_key: str = os.getenv("VIGIL_ACCESS_KEY", "")
+    ingest_url: str = os.getenv("INGEST_URL", "http://localhost:8101")
+    gateway_port: int = int(os.getenv("GATEWAY_PORT", "8100"))
+    bind_host: str = os.getenv("BIND_HOST", "0.0.0.0")  # 127.0.0.1 behind a reverse proxy
 
 
 settings = Settings()

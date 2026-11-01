@@ -67,6 +67,12 @@ Open <http://localhost:5173> on this laptop. A phone uses `https://<laptop-ip>:5
 
 To test with only a laptop camera, sit back so your head, shoulders and arms are in view, mark the zones as spots your hand can reach, and tick **Hand test**. That skips photo checks, which need a camera that can see the unit.
 
+## Deploy to a server
+
+`deploy/setup.sh` installs everything on an Ubuntu or Debian server, runs each service under systemd so it restarts by itself, and adds real HTTPS with Caddy. It stops without changing anything if another web server already uses port 80 or 443. See the top of the script for the steps.
+
+Set `VIGIL_ACCESS_KEY` first. People then open the link once with `?key=...`, and it sets a cookie on that device.
+
 ## Keys
 
 | Key | Used for | With no key |

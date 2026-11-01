@@ -1,6 +1,6 @@
 # Vigil problem and solution brief
 
-Vigil watches a manual assembly bench and stops a wrong step as it happens, then checks that decision against the engineering manual and quotes the page. It catches mistakes in the process, which ordinary inspection cameras cannot see. Built for hackCBS 9.0, it runs on one laptop with no GPU, on a mock product and a 10 page manual.
+Vigil watches a manual assembly bench and stops a wrong step as it happens, then checks that decision against the engineering manual and quotes the page. It catches mistakes in the process, which ordinary inspection cameras cannot see. Built for hackCBS 9.0, it runs on a 4-core server with no GPU, and the demo assembles a real STM32 and OLED display node from a 10 page manual.
 
 ## The problem
 
@@ -34,7 +34,7 @@ A useful system needs two things together: memory of what has happened so far, a
 Here is how it works for the people using it:
 
 1. **An engineer loads the manual.** Vigil reads the steps out of it, and the engineer approves them before anything reaches the bench.
-2. **The operator is guided.** A screen always shows the next action, such as "Step 2 of 5, take the part from Bin B", and that bin glows on the live video.
+2. **The operator is guided.** A screen always shows the next action, such as "Step 3 of 5, take the part from Bin C", and that bin glows on the live video.
 3. **A mistake gets an instant stop.** If a hand reaches for the wrong part, the operator hears the correction and feels a vibration, with no wait for the cloud.
 4. **The manual decides.** Gemini checks the event against the manual, then confirms the mistake or clears it, and quotes the exact section and page.
 5. **The fix is written down.** A confirmed mistake creates an incident record with the rework steps, and that memory carries into later runs.
@@ -78,7 +78,7 @@ Five ideas set Vigil apart, and each one is shown in the working product.
 
 1. **Two speeds.** A local rule raises the alert with no network call, and that rule check takes about 2 ms. A slow or failed cloud call can never delay a stop.
 2. **The rules come from the manual.** Change one line of the manual, approve it, and the bench behaves differently with no code change.
-3. **Same motion, opposite verdict.** Picking the module first is a mistake on a Rev A unit. On a Rev B unit, Gemini clears it by quoting Note 4.1, because that unit ships with its gasket fitted.
+3. **Same motion, opposite verdict.** Reaching for the power wires before the display is fitted is a mistake on a Rev A unit. On a Rev B unit, Gemini clears it by quoting Note 4.2, because that unit arrives with its display fitted.
 4. **It cannot invent a rule.** Every quote is checked against the manual text, and the section and page come from where the quote was found. A quote that fails the check holds the unit for a person, and a photo check with no photo never passes.
 5. **It remembers.** The verdict and incident agents share memory and decision traces through Meko, so a repeat fault across units is noticed. On the third fault at a step, the record applies manual section 6.4 and raises it to the process engineer.
 
@@ -100,19 +100,19 @@ Six services each have their own folder, and the live pipeline talks through Kaf
 
 ## Proof
 
-The whole pipeline runs on one laptop with no GPU, and these are measured results, not estimates.
+The whole pipeline runs with no GPU, and these are measured results, not estimates.
 
 | Measure | Result | How it was tested |
 | --- | --- | --- |
-| Video into Kafka | 1280 x 720 | Real Chrome over WebRTC, with a simulated camera |
+| Real phone video to the server | 14.8 fps, mostly 540 x 960 | 109 seconds on a real phone connection |
 | Pose model speed | 29 fps at 480 px | YOLOv8-Pose alone on the CPU |
-| Hand tracking through Kafka | 11 to 13 fps, median 95 ms | Sample photo replayed as a video stream |
+| Hand tracking through Kafka | 13 to 20 fps, median about 50 ms | Video on the 4-core server, before testing with real hands |
 | Step rule check | About 2 ms | Live services, simulated hand |
 | Gemini order check | 1.5 to 2.9 s | Live Gemini, simulated hand |
 | Gemini order check, real camera | 4.2 s | One live run with the laptop camera |
-| Gemini photo check | 9 of 9 correct | Drawn bench images, 3 times each |
+| Gemini photo check | 9 of 9 correct | Drawn images of an earlier demo product, 3 times each |
 | Injected note in the photo | Ignored 3 of 3 times | A note telling the model to pass the step |
-| Manual search | Right section on 4 of 4 questions | Real embeddings, 10 page manual |
+| Manual search | Right section on 4 of 4 questions | Real embeddings, on the earlier 10 page manual |
 | Automated tests | 48 | Rules, citations, memory client, video path |
 
 **Our 20 real runs.** Fill this in after testing on the bench. Do not present these as results until they are real.
@@ -127,9 +127,9 @@ Quote the real-camera time alongside the simulated range. It comes from a single
 
 Three moments prove the idea, and a judge can try the fourth themselves.
 
-1. **Wrong order.** On a Rev A unit, reach for the module before the gasket. The screen turns red, the phone says "Stop. Install the gasket first", and Gemini confirms it with a quote from the manual.
-2. **Same motion, allowed.** Switch to a Rev B unit and repeat it. The stop fires, then the screen turns green and quotes Note 4.1, because the manual allows it. A basic detector cannot do this.
-3. **Looks right, is wrong.** Route the cable through notch B. The hands look normal, so only the photo and the manual can catch it. This needs a camera that can see the tray.
+1. **Wrong order.** On a Rev A unit, reach for the USB cable before the wiring is done. The screen turns red, the phone says "Stop. Connect the power wires first", and Gemini confirms it with a quote from the manual. This is a real hazard, because a loose wire on a live board can short 3V3 to GND.
+2. **Same motion, allowed.** On a Rev A unit, reaching for the power wires before the display is a mistake. On a Rev B unit, the stop fires, then the screen turns green and quotes Note 4.2, because that unit arrives with its display fitted. A basic detector cannot do this.
+3. **Looks right, is wrong.** Leave out one signal wire. The hands moved normally, so only the photo and the manual can catch it. The manual requires four wires between the boards.
 4. **Hand a judge the manual.** They change one line, an engineer approves it, and the same motion gets a new verdict with no code change.
 
 Record a backup video first, and show a clear REPLAY label if a fallback is ever used.
@@ -152,7 +152,7 @@ Say these before a judge asks, because stating them plainly builds trust.
 
 | Limit | What to say |
 | --- | --- |
-| Mock product | The unit and 10 page manual are ours, written for this demo. |
+| Demo product | The parts are real, but the VDN-1 product and its 10 page manual are ours, written for this demo. |
 | Not zero delay | The stop comes first, and the manual check follows in a few seconds. We show the real times on screen. |
 | 300 pages untested | Vector search took about 5 ms on 1,000 test rows, so speed looks fine. Retrieval quality at that size is untested. |
 | Camera position | YOLOv8-Pose needs to see the operator's body, so the camera sits high and in front. |

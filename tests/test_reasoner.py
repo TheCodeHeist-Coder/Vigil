@@ -12,8 +12,8 @@ from services.reasoner.context import memories, notes_by_step
 from services.reasoner.judge import Decision, ask_rules, judge, verified_citations
 from services.reasoner.meko import MekoClient, MekoError
 
-PROCEDURE = Procedure(**json.loads((ROOT / "manual" / "procedure.json").read_text()))
-LEAVES = {leaf.section: leaf for s in hierarchy(read_pages(ROOT / "manual" / "vg100.md")) for leaf in s.leaves}
+PROCEDURE = Procedure(**json.loads((ROOT / "tests" / "fixtures" / "procedure.json").read_text()))
+LEAVES = {leaf.section: leaf for s in hierarchy(read_pages(ROOT / "tests" / "fixtures" / "vg100.md")) for leaf in s.leaves}
 EXCERPTS = [Excerpt(section, LEAVES[section].page, LEAVES[section].title, LEAVES[section].body, "step") for section in ("4.1", "4.2", "4.3")]
 EVENT = BenchEvent(id="e", bench="b", run_id="r", kind="pick", zone="B", frame_offset=1)
 

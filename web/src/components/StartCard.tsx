@@ -4,8 +4,8 @@ import { Icon } from "./Icon";
 type Props = { cameraLive: boolean; onSetup: () => void; onStart: (serial: string, revision: "A" | "B", photoChecks: boolean) => void; suggested: string; returning: boolean };
 
 const REVISIONS = [
-  { id: "A", name: "Rev A", note: "Gasket fitted by hand" },
-  { id: "B", name: "Rev B", note: "Gasket already fitted" },
+  { id: "A", name: "Rev A", note: "You fit the display" },
+  { id: "B", name: "Rev B", note: "Display already fitted" },
 ] as const;
 
 function zonesMarked(): boolean {

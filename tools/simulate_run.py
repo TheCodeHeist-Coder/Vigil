@@ -21,9 +21,9 @@ TRAY = "TRAY"
 
 SCENARIOS = {
     "clean": ["A", "B", "C", "D", "E"],
-    "e1": ["B"],  # picks the module before the gasket
-    "e2": ["A", "B", "C"],  # the hand path is normal, the cable goes through notch B
-    "e3": ["B", "C", "D", "E"],  # Rev B skips the gasket
+    "e1": ["A", "B", "E"],  # reaches for the USB cable before any wiring
+    "e2": ["A", "B", "C", "D"],  # the hand path is normal, but one wire is missing
+    "e3": ["A", "C", "D", "E"],  # Rev B arrives with the display fitted
 }
 
 

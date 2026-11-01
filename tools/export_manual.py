@@ -1,4 +1,4 @@
-"""Writes manual/vg100.pdf from the Markdown source, one PDF page per page marker."""
+"""Writes manual/vdn1.pdf from the Markdown source, one PDF page per page marker."""
 
 import re
 
@@ -7,8 +7,8 @@ from fpdf import FPDF
 from common.config import ROOT
 from services.knowledge.parse import split_markdown
 
-SOURCE = ROOT / "manual" / "vg100.md"
-TARGET = ROOT / "manual" / "vg100.pdf"
+SOURCE = ROOT / "manual" / "vdn1.md"
+TARGET = ROOT / "manual" / "vdn1.pdf"
 WIDTH = 170
 SIZES = {"#": 18, "##": 14, "###": 12}
 

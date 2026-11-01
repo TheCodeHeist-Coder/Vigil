@@ -19,7 +19,7 @@ from services.reasoner.agent import investigate
 from services.reasoner.context import VERDICT_AGENT, AgentContext, build_context
 from services.reasoner.judge import judge
 
-FRAME_WIDTH = 640
+PHOTO_SIDE = 1024  # jumper wires are thin, so photo checks need the detail
 READ_SECONDS = 0.6
 
 
@@ -43,8 +43,9 @@ class FrameReader:
         if image is None:
             return None
         height, width = image.shape[:2]
-        small = cv2.resize(image, (FRAME_WIDTH, height * FRAME_WIDTH // width))
-        return cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 80])[1].tobytes()
+        scale = min(1.0, PHOTO_SIDE / max(height, width))
+        small = cv2.resize(image, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+        return cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 85])[1].tobytes()
 
     def read(self, offsets: list[int]) -> list[bytes]:
         """Assigns once and reads forward, because re-assigning for each frame stalls for seconds."""

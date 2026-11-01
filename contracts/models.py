@@ -14,7 +14,7 @@ class Step(BaseModel):
     bin: str  # zone the part comes from
     requires: list[str] = Field(default_factory=list)  # steps that must be done first
     check: str  # what a hands-clear frame must show
-    correction: str  # "Stop. Install the gasket first."
+    correction: str  # "Stop. Connect the power wires first."
     clip: str = ""  # pre-rendered audio file, empty means use speech
 
 

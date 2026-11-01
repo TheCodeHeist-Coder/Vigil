@@ -4,7 +4,7 @@ Loads a manual into YugabyteDB as hierarchical embeddings, and proposes a proced
 
 | | |
 | --- | --- |
-| Run | `uv run python -m services.knowledge.main manual/vg100.md` |
+| Run | `uv run python -m services.knowledge.main manual/vdn1.md` |
 | Reads | A Markdown or PDF manual |
 | Writes | `documents`, `chunks`, `procedures` |
 

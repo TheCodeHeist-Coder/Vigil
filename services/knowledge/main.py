@@ -1,4 +1,4 @@
-"""Loads a manual: python -m services.knowledge.main manual/vg100.md"""
+"""Loads a manual: python -m services.knowledge.main manual/vdn1.md"""
 
 import argparse
 from pathlib import Path

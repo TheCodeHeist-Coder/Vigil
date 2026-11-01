@@ -2,7 +2,7 @@
 
 Vigil watches an assembly bench and stops a wrong step as it happens. A local rule raises the alert straight away, then Gemini confirms or clears it with a citation from the manual.
 
-Built for hackCBS 9.0. The demo uses a mock product and a 10 page manual, not a real factory.
+Built for hackCBS 9.0. The demo assembles a real STM32 and OLED display node from a 10 page manual, on a bench, not in a real factory.
 
 ## How it works
 
@@ -54,7 +54,7 @@ docker exec -i vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -c "C
 docker exec -i vigil-yugabyte sh -c 'bin/ysqlsh -h $(hostname) -U yugabyte -d vigil' < db/schema.sql
 uv run python -m tools.fetch_models        # about 15 MB
 uv run python -m tools.topics
-uv run python -m services.knowledge.main manual/vg100.md
+uv run python -m services.knowledge.main manual/vdn1.md
 ./dev.sh                                   # stop with ./dev.sh stop
 ```
 
@@ -87,7 +87,7 @@ After adding `GEMINI_API_KEY`, run these once:
 ```bash
 uv run python -m tools.gemini_latency               # prints which model to use
 uv run python -m tools.render_voice                 # optional voice clips
-uv run python -m services.knowledge.main manual/vg100.md   # real embeddings
+uv run python -m services.knowledge.main manual/vdn1.md   # real embeddings
 uv run python -m tools.reset_runs                   # clears test data before real runs
 ```
 

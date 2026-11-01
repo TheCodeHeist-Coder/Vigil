@@ -65,7 +65,7 @@ chmod 640 .env
 as_vigil() { sudo -u vigil -H "$@"; }
 as_vigil uv sync --no-dev
 for _ in $(seq 1 30); do as_vigil .venv/bin/python -m tools.topics >/dev/null 2>&1 && break; sleep 1; done
-as_vigil .venv/bin/python -m services.knowledge.main manual/vg100.md
+as_vigil .venv/bin/python -m services.knowledge.main manual/vdn1.md
 
 echo "== services"
 cp deploy/vigil@.service /etc/systemd/system/

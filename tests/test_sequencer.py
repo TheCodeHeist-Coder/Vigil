@@ -5,8 +5,8 @@ from contracts.models import Procedure, Verdict, Zone
 from services.sequencer import logic
 from services.sequencer.zones import ZoneTracker, inside
 
-PROCEDURE = Procedure(**json.loads((ROOT / "manual" / "procedure.json").read_text()))
-ZONES = [Zone(**z) for z in json.loads((ROOT / "manual" / "zones.json").read_text())]
+PROCEDURE = Procedure(**json.loads((ROOT / "tests" / "fixtures" / "procedure.json").read_text()))
+ZONES = [Zone(**z) for z in json.loads((ROOT / "tests" / "fixtures" / "zones.json").read_text())]
 REST = (0.5, 0.95)
 BIN_A = (0.12, 0.2)
 TRAY = (0.5, 0.6)

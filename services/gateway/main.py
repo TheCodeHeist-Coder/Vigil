@@ -27,7 +27,7 @@ from services.knowledge.parse import split_markdown
 from services.knowledge.store import approve
 from services.reasoner.meko import MekoClient
 
-MANUAL = ROOT / "manual" / "vg100.md"
+MANUAL = ROOT / "manual" / "vdn1.md"
 PROCEDURE = ROOT / "manual" / "procedure.json"
 ZONES = ROOT / "manual" / "zones.json"
 WEB_BUILD = ROOT / "web" / "dist"

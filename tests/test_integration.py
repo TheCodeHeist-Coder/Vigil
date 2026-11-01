@@ -43,7 +43,7 @@ def test_evidence_frames_read_by_offset_are_fast():
 
     assert len(frames) == 4
     decoded = cv2.imdecode(np.frombuffer(frames[0], np.uint8), cv2.IMREAD_COLOR)
-    assert decoded.shape[1] == reasoner.FRAME_WIDTH
+    assert decoded.shape[1] == reasoner.PHOTO_SIDE
     assert took < 300
 
 

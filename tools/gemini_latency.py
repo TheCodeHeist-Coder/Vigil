@@ -32,14 +32,14 @@ def main() -> None:
         raise SystemExit("Set GEMINI_API_KEY in .env first.")
 
     client = genai.Client(api_key=settings.gemini_api_key)
-    manual = "\n".join(leaf.body for s in hierarchy(read_pages(ROOT / "manual" / "vg100.md"))[3:5] for leaf in s.leaves)
+    manual = "\n".join(leaf.body for s in hierarchy(read_pages(ROOT / "manual" / "vdn1.md"))[3:5] for leaf in s.leaves)
     photo = bench_photo()
     results: dict[str, float] = {}
 
     for model in MODELS:
         times: list[float] = []
         for call in range(CALLS):
-            prompt = f"Unit revision: A. Call {call}. Is the gasket in the tray?\nManual excerpts:\n{manual}"
+            prompt = f"Unit revision: A. Call {call}. Is the display on the breadboard?\nManual excerpts:\n{manual}"
             parts = [types.Part.from_text(text=prompt)] + [types.Part.from_bytes(data=photo, mime_type="image/jpeg") for _ in range(4)]
             started = time.perf_counter()
             try:

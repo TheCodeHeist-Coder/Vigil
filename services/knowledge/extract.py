@@ -11,7 +11,7 @@ bin is the single bin letter named in the step or the parts list.
 requires holds the step that must come first. The first step has none.
 check says what a photo of the finished step must show.
 correction is a short spoken order naming this step's own action, said when an operator skipped this step.
-For a gasket step that is "Stop. Install the gasket first." For a cover step it is "Stop. Fit the cover first."
+For a display step that is "Stop. Seat the display first." For a wiring step it is "Stop. Connect the power wires first."
 Never reuse the wording of another step.
 Ignore notes about skipping steps: they are decided at run time."""
 

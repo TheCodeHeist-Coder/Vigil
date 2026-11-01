@@ -9,7 +9,7 @@ from services.knowledge.extract import with_step_ids
 from services.knowledge.main import ingest_text
 from services.knowledge.parse import hierarchy, read_pages, split_markdown
 
-MANUAL = ROOT / "manual" / "vg100.md"
+MANUAL = ROOT / "tests" / "fixtures" / "vg100.md"
 
 
 def test_manual_has_ten_pages():
@@ -37,9 +37,9 @@ def test_section_spanning_pages_keeps_its_own_page():
 
 
 def test_pdf_gives_the_same_structure_as_markdown():
-    from_pdf = hierarchy(read_pages(ROOT / "manual" / "vg100.pdf"))
+    from_pdf = hierarchy(read_pages(ROOT / "tests" / "fixtures" / "vg100.pdf"))
     from_markdown = hierarchy(read_pages(MANUAL))
-    assert len(read_pages(ROOT / "manual" / "vg100.pdf")) == 10
+    assert len(read_pages(ROOT / "tests" / "fixtures" / "vg100.pdf")) == 10
     assert [s.section for s in from_pdf] == [s.section for s in from_markdown]
     pdf_step = next(leaf for s in from_pdf for leaf in s.leaves if leaf.section == "4.1")
     assert pdf_step.page == 6

@@ -1,7 +1,7 @@
 [
   {
     "id": "A",
-    "label": "Bin A · Gasket",
+    "label": "Bin A · STM32",
     "kind": "bin",
     "polygon": [
       [
@@ -24,7 +24,7 @@
   },
   {
     "id": "B",
-    "label": "Bin B · Module",
+    "label": "Bin B · OLED",
     "kind": "bin",
     "polygon": [
       [
@@ -47,7 +47,7 @@
   },
   {
     "id": "C",
-    "label": "Bin C · Cable",
+    "label": "Bin C · Power wires",
     "kind": "bin",
     "polygon": [
       [
@@ -70,7 +70,7 @@
   },
   {
     "id": "D",
-    "label": "Bin D · Cover",
+    "label": "Bin D · Signal wires",
     "kind": "bin",
     "polygon": [
       [
@@ -93,7 +93,7 @@
   },
   {
     "id": "E",
-    "label": "Bin E · Clips",
+    "label": "Bin E · USB",
     "kind": "bin",
     "polygon": [
       [
@@ -116,7 +116,7 @@
   },
   {
     "id": "TRAY",
-    "label": "Tray",
+    "label": "Breadboard",
     "kind": "tray",
     "polygon": [
       [

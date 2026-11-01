@@ -261,7 +261,7 @@ button.primary { padding: 12px; font-size: 16px; }
   .banner-icon { width: 42px; height: 42px; }
   .banner h1 { font-size: 21px; }
   .banner.stop h1 { font-size: 24px; }
-  .end-run { display: none; }
+  .end-run { width: 100%; order: 3; }
   .setup-bar { flex-wrap: wrap; }
 }
 

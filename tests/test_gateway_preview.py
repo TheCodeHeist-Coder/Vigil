@@ -3,7 +3,7 @@ import time
 import cv2
 import numpy as np
 
-from services.gateway.live import PREVIEW_SIDE, Hub
+from services.gateway.live import PREVIEW_SIDE, RUN_RESUME_SECONDS, Hub
 
 
 def loaded(width: int, height: int) -> Hub:
@@ -39,3 +39,19 @@ def test_no_preview_when_the_camera_has_stopped():
     hub = loaded(1280, 720)
     hub.last_frame_at = time.time() - 10
     assert hub.preview() is None
+
+
+def test_abandoned_run_is_dropped():
+    hub = Hub()
+    hub.last_state = {"run_id": "old"}
+    hub.last_activity = time.time() - RUN_RESUME_SECONDS - 1
+    assert hub.expire_stale_run() is True
+    assert hub.last_state is None
+
+
+def test_active_run_is_kept():
+    hub = Hub()
+    hub.last_state = {"run_id": "now"}
+    hub.last_activity = time.time()
+    assert hub.expire_stale_run() is False
+    assert hub.last_state == {"run_id": "now"}

@@ -26,6 +26,7 @@ TRACK_INTERVAL = 1 / 15  # hand positions are frequent, so browsers get them at 
 PREVIEW_SIDE = 640  # the live view stays light, so it works on a slow connection
 PREVIEW_QUALITY = 60
 CAMERA_TIMEOUT = 2.0
+RUN_RESUME_SECONDS = 15 * 60  # an untouched run this old was abandoned, so it must not come back
 
 
 class Hub:
@@ -36,6 +37,7 @@ class Hub:
         self.frame_count = 0
         self.last_frame_at = 0.0
         self.last_state: dict | None = None
+        self.last_activity = 0.0
         self.preview_jpeg: bytes | None = None
         self.preview_of = -1
 
@@ -63,6 +65,13 @@ class Hub:
         self.sockets.add(socket)
         if self.last_state:
             await socket.send_text(json.dumps({"topic": RUN_STATE, "body": self.last_state}))
+
+    def expire_stale_run(self) -> bool:
+        """Drops a run nobody has touched for a while, so a new screen starts clean."""
+        if self.last_state and time.time() - self.last_activity > RUN_RESUME_SECONDS:
+            self.last_state = None
+            return True
+        return False
 
     def leave(self, socket: WebSocket) -> None:
         self.sockets.discard(socket)
@@ -94,6 +103,8 @@ class Hub:
                     continue
                 last_track = time.time()
             body = json.loads(msg.value())
+            if topic != HAND_TRACKS:
+                self.last_activity = time.time()
             if topic == RUN_STATE:
                 # Only a run in progress is shown to a new screen, so an old result never lingers.
                 self.last_state = None if body.get("finished") else body

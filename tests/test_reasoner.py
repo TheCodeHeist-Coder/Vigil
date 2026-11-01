@@ -34,6 +34,26 @@ def test_e3_rules_clear_on_rev_b_by_quoting_the_note():
     assert "skip step 4.1" in decision.citations[0]["quote"]
 
 
+def test_rev_b_note_can_never_clear_a_rev_a_unit():
+    quote = "On a Rev B unit, skip step 4.1 and start at step 4.2."
+    wrong = lambda prompt, frames: Decision("cleared", "The manual allows this.", [{"section": "4.1", "quote": quote}], "", "m")
+    verdict = judge(flag("A"), PROCEDURE, EXCERPTS, [], [], ask=wrong)
+    assert verdict.status == "confirmed" and verdict.model == "local-rules"
+    assert verdict.spoken == "Stop. Install the gasket first."
+
+
+def test_clear_with_a_quote_naming_no_revision_is_refused():
+    wrong = lambda prompt, frames: Decision("cleared", "Fine.", [{"section": "4.1", "quote": "Take the gasket from bin A."}], "", "m")
+    assert judge(flag("A"), PROCEDURE, EXCERPTS, [], [], ask=wrong).status == "confirmed"
+
+
+def test_rev_b_note_still_clears_a_rev_b_unit():
+    quote = "On a Rev B unit, skip step 4.1 and start at step 4.2."
+    right = lambda prompt, frames: Decision("cleared", "Allowed.", [{"section": "4.1", "quote": quote}], "", "m")
+    verdict = judge(flag("B"), PROCEDURE, EXCERPTS, [], [], ask=right)
+    assert verdict.status == "cleared" and verdict.model == "m"
+
+
 def test_rules_cannot_pass_a_photo_check():
     decision = ask_rules(flag(reason="step_check", expected="S3", actual=None), PROCEDURE, EXCERPTS)
     assert decision.status == "uncertain"

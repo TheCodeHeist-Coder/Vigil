@@ -91,6 +91,9 @@ def control(message: RunControl) -> None:
 
 @app.websocket("/ws/live")
 async def live(socket: WebSocket) -> None:
+    if hub.expire_stale_run():
+        control(RunControl(kind="stop", bench=settings.bench_id))
+        await hub.announce("run.ended", {})
     await hub.join(socket)
     try:
         while True:

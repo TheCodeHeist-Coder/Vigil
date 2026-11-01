@@ -3,6 +3,7 @@ import json
 from common.config import ROOT
 from contracts.models import Procedure, Verdict, Zone
 from services.sequencer import logic
+from services.sequencer.main import in_use
 from services.sequencer.zones import ZoneTracker, inside
 
 PROCEDURE = Procedure(**json.loads((ROOT / "tests" / "fixtures" / "procedure.json").read_text()))
@@ -228,6 +229,21 @@ def test_wires_before_the_display_is_flagged_on_a_shared_bin():
     logic.on_hands_clear(run)
     outputs = logic.on_pick(run, procedure, "C")
     assert outputs[0].expected == "S2" and outputs[0].actual == "S3"
+
+
+def test_a_hand_sweeping_across_a_bin_is_not_a_pick():
+    tracker = ZoneTracker(ZONES)
+    assert tracker.update([BIN_A], 0.0) == []
+    assert tracker.update([REST], 0.07) == []
+    assert tracker.update([REST], 0.14) == []
+    assert tracker.update([REST], 0.21) == []
+    assert tracker.update([REST], 0.5) == []
+
+
+def test_only_bins_in_the_manual_can_fire():
+    procedure = Procedure(steps=[PROCEDURE.steps[0]])
+    used = [zone.id for zone in in_use(ZONES, procedure)]
+    assert "A" in used and "TRAY" in used and "D" not in used
 
 
 def test_inside_polygon():

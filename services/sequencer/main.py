@@ -34,6 +34,12 @@ def load_procedure() -> Procedure:
     return Procedure(**json.loads((ROOT / "manual" / "procedure.json").read_text()))
 
 
+def in_use(zones: list[Zone], procedure: Procedure) -> list[Zone]:
+    """Only bins this manual uses can fire, so a hidden bin can never cause an event."""
+    bins = {step.bin for step in procedure.steps}
+    return [zone for zone in zones if zone.kind == "tray" or zone.id in bins]
+
+
 @dataclass
 class Bench:
     id: str
@@ -53,7 +59,7 @@ class Sequencer:
 
     def bench(self, bench_id: str) -> Bench:
         if bench_id not in self.benches:
-            self.benches[bench_id] = Bench(bench_id, self.zones, self.procedure, ZoneTracker(self.zones))
+            self.benches[bench_id] = Bench(bench_id, self.zones, self.procedure, ZoneTracker(in_use(self.zones, self.procedure)))
         return self.benches[bench_id]
 
     def publish_state(self, bench: Bench) -> None:
@@ -75,15 +81,16 @@ class Sequencer:
         bench = self.bench(control.bench)
         if control.kind == "start":
             bench.run = logic.Run(control.run_id, control.serial or "", control.revision, control.photo_checks)
-            bench.tracker = ZoneTracker(bench.zones)
+            bench.tracker = ZoneTracker(in_use(bench.zones, bench.procedure))
             self.publish_state(bench)
         elif control.kind == "stop":
             bench.run = None
         elif control.kind == "zones" and control.zones:
             self.zones = bench.zones = control.zones
-            bench.tracker = ZoneTracker(bench.zones)
+            bench.tracker = ZoneTracker(in_use(bench.zones, bench.procedure))
         elif control.kind == "procedure" and control.procedure:
             self.procedure = bench.procedure = control.procedure
+            bench.tracker = ZoneTracker(in_use(bench.zones, bench.procedure))
         elif control.kind == "recheck" and bench.run:
             self.send_rechecks(bench, logic.request_recheck(bench.run))
             self.publish_state(bench)
